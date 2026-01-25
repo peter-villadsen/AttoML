@@ -1,0 +1,7 @@
+open Complex
+val a = C (1.5, -2.25)
+val b = C (3.0, 4.0)
+val s = add a b
+val p = mul a b
+val m = magnitude a
+val c = match toPolar b with (mag, theta) -> ofPolar mag theta

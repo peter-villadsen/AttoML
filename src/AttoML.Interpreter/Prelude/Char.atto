@@ -1,0 +1,20 @@
+structure Char = {
+    let isSpace = fun ch ->
+        let n = String.size ch in
+        if n = 0 then false else
+        if n > 1 then false else
+        let c = String.sub ch 0 in
+        (String.compare c " " = 0) orelse (String.compare c "\t" = 0),
+    let isDigit = fun ch ->
+        let n = String.size ch in
+        if n <> 1 then false else
+        let c = String.sub ch 0 in
+        (String.compare c "0" >= 0) andthen (String.compare c "9" <= 0),
+    let isAlpha = fun ch ->
+        let n = String.size ch in
+        if n <> 1 then false else
+        let c = String.sub ch 0 in
+        ((String.compare c "a" >= 0) andthen (String.compare c "z" <= 0)) orelse ((String.compare c "A" >= 0) andthen (String.compare c "Z" <= 0)),
+    let isAlnum = fun ch ->
+        (isAlpha ch) orelse (isDigit ch)
+}

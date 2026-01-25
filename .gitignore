@@ -1,0 +1,43 @@
+# Build artifacts
+bin/
+obj/
+
+# Visual Studio / VS Code
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Debug / test results
+TestResults/
+*.nupkg
+*.snupkg
+
+# Resharper / Rider
+_ReSharper*/
+*.DotSettings.user
+
+# NuGet packages
+packages/
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+lcov.info
+
+# Generated files
+*.g.cs
+
+# Temporary
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor config backups
+*.bak

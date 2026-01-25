@@ -1,0 +1,14 @@
+type Complex = C of float * float
+structure Complex = {
+    let mk = fun r -> fun i -> C (r, i),
+    let re = fun c -> match c with C (r, _) -> r,
+    let im = fun c -> match c with C (_, i) -> i,
+    let add = fun a -> fun b -> match a with C (ar, ai) -> match b with C (br, bi) -> C (ar + br, ai + bi),
+    let sub = fun a -> fun b -> match a with C (ar, ai) -> match b with C (br, bi) -> C (ar - br, ai - bi),
+    let mul = fun a -> fun b -> match a with C (ar, ai) -> match b with C (br, bi) -> C ((ar * br) - (ai * bi), (ar * bi) + (ai * br)),
+    let conj = fun c -> match c with C (r, i) -> C (r, 0.0 - i),
+    let magnitude = fun c -> match c with C (r, i) -> Math.sqrt ((r * r) + (i * i)),
+    let magnitudeSquared = fun c -> match c with C (r, i) -> (r * r) + (i * i),
+    let ofPolar = fun mag -> fun theta -> C (mag * Math.cos theta, mag * Math.sin theta),
+    let toPolar = fun c -> match c with C (r, i) -> let mag = Math.sqrt ((r * r) + (i * i)) in (mag, Math.atan2 i r)
+}
