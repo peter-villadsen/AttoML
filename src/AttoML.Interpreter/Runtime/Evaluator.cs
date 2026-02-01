@@ -23,14 +23,30 @@ namespace AttoML.Interpreter
             foreach (var s in ms.Structures.Values)
             {
                 var members = new Dictionary<string, Value>();
-                // Evaluate bindings in a fresh env scoped to module (no external injection yet)
+                // Evaluate bindings in a fresh env scoped to module
                 var localEnv = GlobalEnv.Clone();
+                
+                // Pre-declare all bindings to support mutual recursion
+                // Create placeholder values that will be updated
+                var placeholders = new Dictionary<string, PlaceholderVal>();
+                foreach (var (bn, _, _) in s.OrderedBindings)
+                {
+                    var placeholder = new PlaceholderVal();
+                    placeholders[bn] = placeholder;
+                    localEnv.Set(bn, placeholder);
+                }
+                
+                // Now evaluate all bindings - they can reference each other
                 foreach (var (bn, bexpr, _) in s.OrderedBindings)
                 {
                     var v = Eval(bexpr, localEnv);
                     members[bn] = v;
+                    // Update the placeholder so any closures that captured it will see the real value
+                    placeholders[bn].ActualValue = v;
+                    // Also update localEnv for subsequent bindings
                     localEnv.Set(bn, v);
                 }
+                
                 var modVal = new ModuleVal(members);
                 Modules[s.Name] = modVal;
                 // Inject qualified names
@@ -48,9 +64,14 @@ namespace AttoML.Interpreter
                 if (d is OpenDecl od)
                 {
                     if (!Modules.TryGetValue(od.Name, out var mv))
+                    {
+                        Console.WriteLine($"  Available modules: {string.Join(", ", Modules.Keys)}");
                         throw new Exception($"Unknown module {od.Name}");
+                    }
                     foreach (var kv in mv.Members)
+                    {
                         GlobalEnv.Set(kv.Key, kv.Value);
+                    }
                 }
             }
         }
@@ -85,6 +106,12 @@ namespace AttoML.Interpreter
                 case UnitLit: return UnitVal.Instance;
                 case Var v:
                     if (!env.TryGet(v.Name, out var vv)) throw new Exception($"Unbound variable {v.Name}");
+                    // If it's a placeholder, return the actual value
+                    if (vv is PlaceholderVal ph)
+                    {
+                        if (ph.ActualValue == null) throw new Exception($"Variable {v.Name} used before initialization");
+                        return ph.ActualValue;
+                    }
                     return vv;
                 case Fun fun:
                     return new ClosureVal(arg =>

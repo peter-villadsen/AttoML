@@ -11,12 +11,14 @@ type Expr =
 | Log of Expr
 
 structure SymCalc = {
+  let testAdd : int * int -> int = fun (a, b) -> a + b,
   let fstEI : Expr * int -> Expr = fun (e, _) -> e,
   let sndEI : Expr * int -> int = fun (_, i) -> i,
   let fstFI : float * int -> float = fun (n, _) -> n,
   let sndFI : float * int -> int = fun (_, i) -> i,
   let fstSI : string * int -> string = fun (s, _) -> s,
   let sndSI : string * int -> int = fun (_, i) -> i,
+
   let skipSpacesLoop : string * int * int -> int = fun (s, n, j) ->
     if j < n then
       let ch = String.sub s j in

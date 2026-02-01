@@ -12,14 +12,32 @@ namespace AttoML.Interpreter
 		static void Main(string[] args)
 		{
 			bool verbose = false;
+			bool forceRepl = false;
 			string? path = null;
 			for (int i = 0; i < args.Length; i++)
 			{
 				var a = args[i];
-				if (a == "-v" || a == "--verbose") { verbose = true; continue; }
-				if (!a.StartsWith("-")) { path = a; break; }
+				var aLower = a.ToLowerInvariant();
+				if (aLower == "-v" || aLower == "--verbose") 
+				{ 
+					verbose = true; 
+					continue; 
+				}
+				
+				if (aLower == "-r" || aLower == "--repl") 
+				{ 
+					forceRepl = true; 
+					continue; 
+				}
+				
+				if (!a.StartsWith("-")) 
+				{ 
+					path = a; 
+					break; 
+				}
 			}
-			if (path == null)
+
+			if (forceRepl || path == null)
 			{
 				RunRepl(verbose);
 			}
@@ -33,12 +51,10 @@ namespace AttoML.Interpreter
 		static void EvaluateSource(string source, bool verbose)
 		{
 			var frontend = new Frontend();
-			// Load prelude (Complex) before user source so it's available to consume
-			LoadPrelude(frontend);
-			var (decls, modules, expr, exprType) = frontend.Compile(source);
 			var evaluator = new Evaluator();
-			// Load builtins
 			LoadBuiltins(evaluator);
+			LoadPrelude(frontend, evaluator, verbose);
+			var (decls, modules, expr, exprType) = frontend.Compile(source);
 			if (verbose)
 			{
 				foreach (var d in decls)
@@ -51,6 +67,29 @@ namespace AttoML.Interpreter
 			evaluator.LoadAdts(modules);
 			evaluator.LoadExceptions(modules);
 			evaluator.ApplyOpen(decls);
+			
+			// Handle 'open' declarations by injecting unqualified names into BaseTypeEnv
+			foreach (var d in decls)
+			{
+				if (d is OpenDecl od)
+				{
+					if (verbose) Console.WriteLine($"[FILE] Processing open {od.Name} - injecting unqualified names into BaseTypeEnv");
+					// Find all qualified names starting with "ModuleName."
+					var prefix = od.Name + ".";
+					var qualifiedNames = frontend.BaseTypeEnv.Names.Where(n => n.StartsWith(prefix)).ToList();
+					if (verbose) Console.WriteLine($"[FILE]   Found {qualifiedNames.Count} qualified names for {od.Name}");
+					foreach (var qname in qualifiedNames)
+					{
+						var unqualifiedName = qname.Substring(prefix.Length);
+						if (frontend.BaseTypeEnv.TryGet(qname, out var scheme))
+						{
+							frontend.BaseTypeEnv.Add(unqualifiedName, scheme);
+							if (verbose) Console.WriteLine($"[FILE]     Added {unqualifiedName} -> {scheme.Type}");
+						}
+					}
+				}
+			}
+
 			// Handle top-level val declarations
 			var valTypes = frontend.InferTopVals(modules, decls);
 			Value? lastVal = evaluator.ApplyValDecls(decls);
@@ -93,9 +132,9 @@ namespace AttoML.Interpreter
 		{
 			Console.WriteLine("AttoML REPL. Enter expressions or module definitions. Ctrl+C to exit.");
 			var frontend = new Frontend();
-			LoadPrelude(frontend);
 			var evaluator = new Evaluator();
 			LoadBuiltins(evaluator);
+			LoadPrelude(frontend, evaluator, verbose);
 
 			while (true)
 			{
@@ -103,6 +142,7 @@ namespace AttoML.Interpreter
 				string? line = Console.ReadLine();
 				if (line == null) break;
 				if (string.IsNullOrWhiteSpace(line)) continue;
+				
 				string source = line;
 				// If the user explicitly ends with ';;', strip and submit
 				if (source.Contains(";;"))
@@ -143,19 +183,62 @@ namespace AttoML.Interpreter
 				}
 				try
 				{
+					if (verbose) Console.WriteLine($"[REPL] Compiling: {source}");
 					var (decls, modules, expr, exprType) = frontend.Compile(source);
 					if (verbose)
 					{
+						Console.WriteLine($"[REPL] Compiled. Decls: {decls.Count}, Expr: {expr != null}");
 						foreach (var d in decls)
 						{
 							var dstr = AstPrinter.Print(d);
-							Console.WriteLine($"AST decl: {dstr}");
+							Console.WriteLine($"[REPL]   AST decl: {dstr}");
+							if (d is OpenDecl od)
+							{
+								Console.WriteLine($"[REPL]   Opening module: {od.Name}");
+								Console.WriteLine($"[REPL]   Available in evaluator.Modules: {string.Join(", ", evaluator.Modules.Keys)}");
+							}
 						}
 					}
 					evaluator.LoadModules(modules);
 					evaluator.LoadAdts(modules);
 					evaluator.LoadExceptions(modules);
 					evaluator.ApplyOpen(decls);
+					
+					// Handle 'open' declarations by injecting unqualified names into BaseTypeEnv
+					foreach (var d in decls)
+					{
+						if (d is OpenDecl od)
+						{
+							if (verbose) Console.WriteLine($"[REPL] Processing open {od.Name} - injecting unqualified names into BaseTypeEnv");
+							// Find all qualified names starting with "ModuleName."
+							var prefix = od.Name + ".";
+							var qualifiedNames = frontend.BaseTypeEnv.Names.Where(n => n.StartsWith(prefix)).ToList();
+							if (verbose) Console.WriteLine($"[REPL]   Found {qualifiedNames.Count} qualified names for {od.Name}");
+							foreach (var qname in qualifiedNames)
+							{
+								var unqualifiedName = qname.Substring(prefix.Length);
+								if (frontend.BaseTypeEnv.TryGet(qname, out var scheme))
+								{
+									frontend.BaseTypeEnv.Add(unqualifiedName, scheme);
+									if (verbose) Console.WriteLine($"[REPL]     Added {unqualifiedName} -> {scheme.Type}");
+								}
+							}
+						}
+					}
+
+					if (verbose && decls.Any(d => d is OpenDecl))
+					{
+						Console.WriteLine($"[REPL] After processing open declarations, checking for unqualified names:");
+						if (frontend.BaseTypeEnv.TryGet("testAdd", out var testAddScheme))
+						{
+							Console.WriteLine($"[REPL]   testAdd found: {testAddScheme.Type}");
+						}
+						else
+						{
+							Console.WriteLine($"[REPL]   testAdd NOT found!");
+						}
+					}
+					
 					// Handle top-level val declarations first
 					var valTypes = frontend.InferTopVals(modules, decls);
 					Value? lastVal = evaluator.ApplyValDecls(decls);
@@ -170,7 +253,7 @@ namespace AttoML.Interpreter
 						if (verbose)
 						{
 							var ast = AttoML.Core.Parsing.AstPrinter.Print(expr);
-							Console.WriteLine($"AST: {ast}");
+							Console.WriteLine($"[REPL] Evaluating AST: {ast}");
 						}
 						var v = evaluator.Eval(expr, evaluator.GlobalEnv);
 						evaluator.GlobalEnv.Set("it", v);
@@ -194,6 +277,11 @@ namespace AttoML.Interpreter
 				catch (Exception ex)
 				{
 					Console.WriteLine($"error: {ex.Message}");
+					if (verbose)
+					{
+						Console.WriteLine($"[REPL] Exception stack trace:");
+						Console.WriteLine(ex.StackTrace);
+					}
 				}
 			}
 		}
@@ -243,32 +331,77 @@ namespace AttoML.Interpreter
 			evaluator.GlobalEnv.Set("Domain", new AdtVal("Domain", null));
 		}
 
-		static void LoadPrelude(Frontend frontend)
+		static void LoadPrelude(Frontend frontend, Evaluator evaluator, bool verbose)
 		{
-			try
+			void LoadOne(string filename)
 			{
-				void LoadOne(string filename)
+				var abs = Path.Combine(AppContext.BaseDirectory, "Prelude", filename);
+				string src;
+				if (File.Exists(abs))
 				{
-					var abs = Path.Combine(AppContext.BaseDirectory, "Prelude", filename);
-					string src;
-					if (File.Exists(abs))
+					if (verbose) Console.WriteLine($"[PRELUDE] Found {filename} at: {abs}");
+					src = File.ReadAllText(abs);
+				}
+				else
+				{
+					var repoRel = Path.Combine(Directory.GetCurrentDirectory(), "src", "AttoML.Interpreter", "Prelude", filename);
+					if (File.Exists(repoRel))
 					{
-						src = File.ReadAllText(abs);
+						if (verbose) Console.WriteLine($"[PRELUDE] Found {filename} at: {repoRel}");
+						src = File.ReadAllText(repoRel);
 					}
 					else
 					{
-						var repoRel = Path.Combine(Directory.GetCurrentDirectory(), "src", "AttoML.Interpreter", "Prelude", filename);
-						src = File.Exists(repoRel) ? File.ReadAllText(repoRel) : "";
-					}
-					if (!string.IsNullOrWhiteSpace(src))
-					{
-						var (pDecls, pModules, _, _) = frontend.Compile(src);
+						if (verbose) Console.WriteLine($"[PRELUDE] WARNING: Could not find {filename}");
+						if (verbose) Console.WriteLine($"[PRELUDE]   Tried: {abs}");
+						if (verbose) Console.WriteLine($"[PRELUDE]   Tried: {repoRel}");
+						src = "";
 					}
 				}
-				LoadOne("Complex.atto");
-				LoadOne("SymCalc.atto");
+				if (!string.IsNullOrWhiteSpace(src))
+				{
+					if (verbose) Console.WriteLine($"[PRELUDE] Loading {filename}... (size: {src.Length} bytes)");
+					var (pDecls, pModules, _, _) = frontend.Compile(src);
+					if (verbose) Console.WriteLine($"[PRELUDE]   Compiled: {pModules.Structures.Count} structures, {pModules.Adts.Count} ADTs");
+					
+					evaluator.LoadAdts(pModules);
+					if (verbose) Console.WriteLine($"[PRELUDE]   Loaded ADTs");
+					
+					evaluator.LoadModules(pModules);
+					if (verbose) Console.WriteLine($"[PRELUDE]   Loaded modules into evaluator. Modules in evaluator.Modules: {string.Join(", ", evaluator.Modules.Keys)}");
+					
+					// Also need to persist the structure types into BaseTypeEnv for REPL commands
+					// Inject structure member types into the base type environment
+					var ti = new AttoML.Core.Types.TypeInference();
+					var tempEnv = pModules.InjectStructuresInto(frontend.BaseTypeEnv, ti, null);
+					
+					// Copy the qualified names from tempEnv to BaseTypeEnv
+					foreach (var s in pModules.Structures.Values)
+					{
+						if (verbose) Console.WriteLine($"[PRELUDE]   Processing structure {s.Name} with {s.OrderedBindings.Count} bindings");
+						foreach (var (bn, _, _) in s.OrderedBindings)
+						{
+							var qname = $"{s.Name}.{bn}";
+							if (tempEnv.TryGet(qname, out var scheme))
+							{
+								frontend.BaseTypeEnv.Add(qname, scheme);
+								if (verbose) Console.WriteLine($"[PRELUDE]     Added type for {qname}: {scheme.Type}");
+							}
+							else
+							{
+								if (verbose) Console.WriteLine($"[PRELUDE]     WARNING: Could not find type for {qname}");
+							}
+						}
+					}
+					if (verbose) Console.WriteLine($"[PRELUDE]   Completed loading {filename}");
+				}
+				else
+				{
+					if (verbose) Console.WriteLine($"[PRELUDE] Skipping {filename} - file is empty or not found");
+				}
 			}
-			catch { /* ignore prelude load errors */ }
+			LoadOne("Complex.atto");
+			LoadOne("SymCalc.atto");
 		}
 	}
 }

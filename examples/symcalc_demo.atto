@@ -1,0 +1,23 @@
+(* SymCalc Demo - Basic parsing and evaluation *)
+open SymCalc
+
+(* Test 1: Parse a simple expression *)
+let e1 = parse "2 + 3 * 4" in
+toString e1
+
+(* Test 2: Parse and differentiate x^3 *)
+let e2 = parse "x ^ 3" in
+let d2 = diff ("x", e2) in
+let s2 = simplify d2 in
+toString s2
+
+(* Test 3: Parse and differentiate sin(x)/x *)
+let e3 = parse "sin(x) / x" in
+let d3 = diff ("x", e3) in
+let s3 = simplify d3 in
+toString s3
+
+(* Test 4: Simplify (x * 1) + 0 *)
+let e4 = parse "(x * 1) + 0" in
+let s4 = simplify e4 in
+toString s4

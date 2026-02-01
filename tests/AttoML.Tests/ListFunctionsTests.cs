@@ -5,40 +5,12 @@ using AttoML.Interpreter.Runtime;
 
 namespace AttoML.Tests
 {
-    public class ListFunctionsTests
+    public class ListFunctionsTests : AttoMLTestBase
     {
-        private (Frontend, Evaluator) Setup()
-        {
-            var fe = new Frontend();
-            var ev = new Evaluator();
-            var baseMod = AttoML.Interpreter.Builtins.BaseModule.Build();
-            ev.Modules["Base"] = baseMod;
-            foreach (var kv in baseMod.Members)
-            {
-                ev.GlobalEnv.Set($"Base.{kv.Key}", kv.Value);
-            }
-            foreach (var kv in baseMod.Members)
-            {
-                ev.GlobalEnv.Set(kv.Key, kv.Value);
-            }
-            var listMod = AttoML.Interpreter.Builtins.ListModule.Build();
-            ev.Modules["List"] = listMod;
-            foreach (var kv in listMod.Members)
-            {
-                ev.GlobalEnv.Set($"List.{kv.Key}", kv.Value);
-            }
-            foreach (var kv in listMod.Members)
-            {
-                ev.GlobalEnv.Set(kv.Key, kv.Value);
-            }
-            return (fe, ev);
-        }
-
         [Fact]
         public void AppendOperator()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("[1,2] @ [3]");
+            var (_, ev, expr, _) = CompileAndInitialize("[1,2] @ [3]");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var lv = Assert.IsType<ListVal>(v);
             Assert.Equal(3, lv.Items.Count);
@@ -47,8 +19,7 @@ namespace AttoML.Tests
         [Fact]
         public void MapIncrements()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.map (fun x -> Base.add x 1) [1,2]");
+            var (_, ev, expr, _) = CompileAndInitialize("List.map (fun x -> Base.add x 1) [1,2]");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var lv = Assert.IsType<ListVal>(v);
             Assert.Equal(2, lv.Items.Count);
@@ -59,8 +30,7 @@ namespace AttoML.Tests
         [Fact]
         public void NullOnEmpty()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.null []");
+            var (_, ev, expr, _) = CompileAndInitialize("List.null []");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.True(((BoolVal)v).Value);
         }
@@ -68,8 +38,7 @@ namespace AttoML.Tests
         [Fact]
         public void ExistsWorks()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.exists (fun x -> Base.eq x 2) [1,2,3]");
+            var (_, ev, expr, _) = CompileAndInitialize("List.exists (fun x -> Base.eq x 2) [1,2,3]");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.True(((BoolVal)v).Value);
         }
@@ -77,8 +46,7 @@ namespace AttoML.Tests
         [Fact]
         public void AllWorks()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.all (fun x -> Base.lt x 10) [1,2,3]");
+            var (_, ev, expr, _) = CompileAndInitialize("List.all (fun x -> Base.lt x 10) [1,2,3]");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.True(((BoolVal)v).Value);
         }
@@ -86,8 +54,7 @@ namespace AttoML.Tests
         [Fact]
         public void FoldlSum()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.foldl (fun acc -> fun x -> Base.add acc x) 0 [1,2,3]");
+            var (_, ev, expr, _) = CompileAndInitialize("List.foldl (fun acc -> fun x -> Base.add acc x) 0 [1,2,3]");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.Equal(6, ((IntVal)v).Value);
         }
@@ -95,8 +62,7 @@ namespace AttoML.Tests
         [Fact]
         public void FoldrSum()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.foldr (fun x -> fun acc -> Base.add acc x) 0 [1,2,3]");
+            var (_, ev, expr, _) = CompileAndInitialize("List.foldr (fun x -> fun acc -> Base.add acc x) 0 [1,2,3]");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.Equal(6, ((IntVal)v).Value);
         }
@@ -104,12 +70,11 @@ namespace AttoML.Tests
         [Fact]
         public void LengthAndHeadTail()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("let xs = [1,2,3] in Base.add (List.length xs) (List.head xs)");
+            var (fe, ev, expr, _) = CompileAndInitialize("let xs = [1,2,3] in Base.add (List.length xs) (List.head xs)");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.Equal(4, ((IntVal)v).Value);
 
-            var (decls2, mods2, expr2, type2) = fe.Compile("List.tail [1,2,3]");
+            var (_, _, expr2, _) = CompileAndInitialize("List.tail [1,2,3]");
             var v2 = ev.Eval(expr2!, ev.GlobalEnv);
             var lv2 = Assert.IsType<ListVal>(v2);
             Assert.Equal(2, lv2.Items.Count);
@@ -119,8 +84,7 @@ namespace AttoML.Tests
         [Fact]
         public void FilterGreaterThanOne()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.filter (fun x -> Base.lt 1 x) [1,2,3]");
+            var (_, ev, expr, _) = CompileAndInitialize("List.filter (fun x -> Base.lt 1 x) [1,2,3]");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var lv = Assert.IsType<ListVal>(v);
             Assert.Equal(2, lv.Items.Count);
@@ -131,8 +95,7 @@ namespace AttoML.Tests
         [Fact]
         public void HdOnEmptyListRaisesFail()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("hd []");
+            var (_, ev, expr, _) = CompileAndInitialize("hd []");
             var ax = Assert.Throws<AttoML.Interpreter.Runtime.AttoException>(() => ev.Eval(expr!, ev.GlobalEnv));
             var exn = Assert.IsType<AdtVal>(ax.Exn);
             Assert.Equal("Fail", exn.Ctor);
@@ -143,8 +106,7 @@ namespace AttoML.Tests
         [Fact]
         public void TlOnEmptyListRaisesFail()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("tl []");
+            var (_, ev, expr, _) = CompileAndInitialize("tl []");
             var ax = Assert.Throws<AttoML.Interpreter.Runtime.AttoException>(() => ev.Eval(expr!, ev.GlobalEnv));
             var exn = Assert.IsType<AdtVal>(ax.Exn);
             Assert.Equal("Fail", exn.Ctor);
@@ -155,8 +117,7 @@ namespace AttoML.Tests
         [Fact]
         public void QualifiedListHdOnEmptyListRaisesFail()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.hd []");
+            var (_, ev, expr, _) = CompileAndInitialize("List.hd []");
             var ax = Assert.Throws<AttoML.Interpreter.Runtime.AttoException>(() => ev.Eval(expr!, ev.GlobalEnv));
             var exn = Assert.IsType<AdtVal>(ax.Exn);
             Assert.Equal("Fail", exn.Ctor);
@@ -167,8 +128,7 @@ namespace AttoML.Tests
         [Fact]
         public void QualifiedListTlOnEmptyListRaisesFail()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("List.tl []");
+            var (_, ev, expr, _) = CompileAndInitialize("List.tl []");
             var ax = Assert.Throws<AttoML.Interpreter.Runtime.AttoException>(() => ev.Eval(expr!, ev.GlobalEnv));
             var exn = Assert.IsType<AdtVal>(ax.Exn);
             Assert.Equal("Fail", exn.Ctor);
@@ -179,8 +139,7 @@ namespace AttoML.Tests
         [Fact]
         public void HdEmptyListHandledReturnsMessage()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("((hd []) handle Fail s -> s)");
+            var (_, ev, expr, _) = CompileAndInitialize("((hd []) handle Fail s -> s)");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var sv = Assert.IsType<StringVal>(v);
             Assert.Equal("empty list", sv.Value);
@@ -189,8 +148,7 @@ namespace AttoML.Tests
         [Fact]
         public void TlEmptyListHandledReturnsMessage()
         {
-            var (fe, ev) = Setup();
-            var (decls, mods, expr, type) = fe.Compile("((tl []) handle Fail s -> [])");
+            var (_, ev, expr, _) = CompileAndInitialize("((tl []) handle Fail s -> [])");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var lv = Assert.IsType<ListVal>(v);
             Assert.Empty(lv.Items);

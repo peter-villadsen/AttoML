@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "AttoML.Interpreter": {
+      "commandName": "Project",
+      "commandLineArgs": "--verbose"
+    }
+  }
+}
