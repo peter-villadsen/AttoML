@@ -11,15 +11,16 @@ type Expr =
 | Log of Expr
 
 structure SymCalc = {
-  let testAdd : int * int -> int = fun (a, b) -> a + b,
-  let fstEI : Expr * int -> Expr = fun (e, _) -> e,
-  let sndEI : Expr * int -> int = fun (_, i) -> i,
-  let fstFI : float * int -> float = fun (n, _) -> n,
-  let sndFI : float * int -> int = fun (_, i) -> i,
-  let fstSI : string * int -> string = fun (s, _) -> s,
-  let sndSI : string * int -> int = fun (_, i) -> i,
+  (* Helper functions for tuple projections *)
+  fun fstEI (e, _) = e,
+  fun sndEI (_, i) = i,
+  fun fstFI (n, _) = n,
+  fun sndFI (_, i) = i,
+  fun fstSI (s, _) = s,
+  fun sndSI (_, i) = i,
 
-  let skipSpacesLoop : string * int * int -> int = fun (s, n, j) ->
+  (* Skip whitespace in string *)
+  fun skipSpacesLoop (s, n, j) =
     if j < n then
       let ch = String.sub s j in
       if String.compare ch " " = 0 then skipSpacesLoop (s, n, j + 1)
@@ -27,17 +28,19 @@ structure SymCalc = {
       else j
     else j,
 
-  let skipSpaces : string * int -> int = fun (s, i) ->
+  fun skipSpaces (s, i) =
     let n = String.size s in skipSpacesLoop (s, n, i),
 
-  let scanWhile = fun (pred, s, i) ->
+  (* Scan characters while predicate holds *)
+  fun scanWhile (pred, s, i) =
     let n = String.size s in
     if i < n then
       let ch = String.sub s i in
       if pred ch then scanWhile (pred, s, i + 1) else i
     else i,
 
-  let scanNumber : string * int -> float * int = fun (s, i) ->
+  (* Scan a numeric literal *)
+  fun scanNumber (s, i) =
     let n = String.size s in
     let j0 = scanWhile ((fun ch ->
       if String.compare ch "." = 0 then true
@@ -52,9 +55,11 @@ structure SymCalc = {
       else if String.compare ch "8" = 0 then true
       else if String.compare ch "9" = 0 then true
       else false), s, i) in
-    if j0 = i then raise (Fail "expected number") else (String.toFloat (String.substring s i (j0 - i)), j0),
+    if j0 = i then raise (Fail "expected number") 
+    else (String.toFloat (String.substring s i (j0 - i)), j0),
 
-  let scanIdent : string * int -> string * int = fun (s, i) ->
+  (* Scan an identifier *)
+  fun scanIdent (s, i) =
     let j0 = scanWhile ((fun ch ->
       if String.compare ch "_" = 0 then true
       else if String.compare ch "a" >= 0 then (String.compare ch "z" <= 0)
@@ -63,71 +68,85 @@ structure SymCalc = {
       else false), s, i) in
     let name = String.substring s i (j0 - i) in (name, j0),
 
-  let parseExprLoop : string * Expr * int -> Expr * int = fun (s, acc, j) ->
+  (* Parser functions - forward declarations handled by mutual recursion *)
+  fun parseExprLoop (s, acc, j) =
     let j1 = skipSpaces (s, j) in
     if j1 < String.size s then
       let ch = String.sub s j1 in
       if String.compare ch "+" = 0 then
-        let p = parseTerm (s, j1 + 1) in parseExprLoop (s, Expr.Add (acc, fstEI p), sndEI p)
+        let p = parseTerm (s, j1 + 1) in 
+        parseExprLoop (s, Expr.Add (acc, fstEI p), sndEI p)
       else if String.compare ch "-" = 0 then
-        let p = parseTerm (s, j1 + 1) in parseExprLoop (s, Expr.Sub (acc, fstEI p), sndEI p)
+        let p = parseTerm (s, j1 + 1) in 
+        parseExprLoop (s, Expr.Sub (acc, fstEI p), sndEI p)
       else (acc, j1)
     else (acc, j1),
 
-  let parseTermLoop : string * Expr * int -> Expr * int = fun (s, acc, j) ->
+  fun parseTermLoop (s, acc, j) =
     let j1 = skipSpaces (s, j) in
     if j1 < String.size s then
       let ch = String.sub s j1 in
       if String.compare ch "*" = 0 then
-        let p = parsePower (s, j1 + 1) in parseTermLoop (s, Expr.Mul (acc, fstEI p), sndEI p)
+        let p = parsePower (s, j1 + 1) in 
+        parseTermLoop (s, Expr.Mul (acc, fstEI p), sndEI p)
       else if String.compare ch "/" = 0 then
-        let p = parsePower (s, j1 + 1) in parseTermLoop (s, Expr.Div (acc, fstEI p), sndEI p)
+        let p = parsePower (s, j1 + 1) in 
+        parseTermLoop (s, Expr.Div (acc, fstEI p), sndEI p)
       else (acc, j1)
     else (acc, j1),
 
-  let parseExpr : string * int -> Expr * int = fun (s, i) ->
-    let p0 = parseTerm (s, i) in parseExprLoop (s, fstEI p0, sndEI p0),
+  fun parseExpr (s, i) =
+    let p0 = parseTerm (s, i) in 
+    parseExprLoop (s, fstEI p0, sndEI p0),
 
-  let parseTerm : string * int -> Expr * int = fun (s, i) ->
-    let p0 = parsePower (s, i) in parseTermLoop (s, fstEI p0, sndEI p0),
+  fun parseTerm (s, i) =
+    let p0 = parsePower (s, i) in 
+    parseTermLoop (s, fstEI p0, sndEI p0),
 
-  let parsePower : string * int -> Expr * int = fun (s, i) ->
+  fun parsePower (s, i) =
     let p0 = parseUnary (s, i) in
-    let base = fstEI p0 in let j0 = sndEI p0 in
+    let base = fstEI p0 in 
+    let j0 = sndEI p0 in
     let j1 = skipSpaces (s, j0) in
     if (j1 < String.size s) andthen (String.compare (String.sub s j1) "^" = 0) then
-      let p = parsePower (s, j1 + 1) in (Expr.Pow (base, fstEI p), sndEI p)
+      let p = parsePower (s, j1 + 1) in 
+      (Expr.Pow (base, fstEI p), sndEI p)
     else (base, j0),
 
-  let parseUnary : string * int -> Expr * int = fun (s, i) ->
+  fun parseUnary (s, i) =
     let j0 = skipSpaces (s, i) in
     if j0 < String.size s then
       let ch = String.sub s j0 in
       if String.compare ch "+" = 0 then parseUnary (s, j0 + 1)
       else if String.compare ch "-" = 0 then
-        let p = parseUnary (s, j0 + 1) in (Expr.Mul (Expr.Const (0.0 - 1.0), fstEI p), sndEI p)
+        let p = parseUnary (s, j0 + 1) in 
+        (Expr.Mul (Expr.Const (0.0 - 1.0), fstEI p), sndEI p)
       else parseAtom (s, j0)
     else raise (Fail "unexpected end of input"),
 
-  let parseFunArg : string * int -> Expr * int = fun (s, i) ->
+  fun parseFunArg (s, i) =
     let j0 = skipSpaces (s, i) in
     if (j0 < String.size s) andthen (String.compare (String.sub s j0) "(" = 0) then
       let p = parseExpr (s, j0 + 1) in
-      let e = fstEI p in let j1 = sndEI p in
+      let e = fstEI p in 
+      let j1 = sndEI p in
       let j2 = skipSpaces (s, j1) in
-      if (j2 < String.size s) andthen (String.compare (String.sub s j2) ")" = 0) then (e, j2 + 1)
+      if (j2 < String.size s) andthen (String.compare (String.sub s j2) ")" = 0) then 
+        (e, j2 + 1)
       else raise (Fail ") expected")
     else parseUnary (s, j0),
 
-  let parseAtom : string * int -> Expr * int = fun (s, i) ->
+  fun parseAtom (s, i) =
     let j0 = skipSpaces (s, i) in
     if j0 >= String.size s then raise (Fail "unexpected end") else
     let ch = String.sub s j0 in
     if String.compare ch "(" = 0 then
       let p = parseExpr (s, j0 + 1) in
-      let e = fstEI p in let j1 = sndEI p in
+      let e = fstEI p in 
+      let j1 = sndEI p in
       let j2 = skipSpaces (s, j1) in
-      if (j2 < String.size s) andthen (String.compare (String.sub s j2) ")" = 0) then (e, j2 + 1)
+      if (j2 < String.size s) andthen (String.compare (String.sub s j2) ")" = 0) then 
+        (e, j2 + 1)
       else raise (Fail ") expected")
     else if String.compare ch "." = 0 then
       let p = scanNumber (s, j0) in (Expr.Const (fstFI p), sndFI p)
@@ -153,112 +172,214 @@ structure SymCalc = {
       let p = scanNumber (s, j0) in (Expr.Const (fstFI p), sndFI p)
     else 
       let p = scanIdent (s, j0) in
-      let name = fstSI p in let j1 = sndSI p in
+      let name = fstSI p in 
+      let j1 = sndSI p in
       if j1 = j0 then raise (Fail "unexpected character") else
-      if name = "sin" then let p2 = parseFunArg (s, j1) in (Expr.Sin (fstEI p2), sndEI p2)
-      else if name = "cos" then let p2 = parseFunArg (s, j1) in (Expr.Cos (fstEI p2), sndEI p2)
-      else if name = "log" then let p2 = parseFunArg (s, j1) in (Expr.Log (fstEI p2), sndEI p2)
-      else (Expr.Var name, j1)
-    ,
+      if name = "sin" then 
+        let p2 = parseFunArg (s, j1) in (Expr.Sin (fstEI p2), sndEI p2)
+      else if name = "cos" then 
+        let p2 = parseFunArg (s, j1) in (Expr.Cos (fstEI p2), sndEI p2)
+      else if name = "log" then 
+        let p2 = parseFunArg (s, j1) in (Expr.Log (fstEI p2), sndEI p2)
+      else (Expr.Var name, j1),
 
-  let parse : string -> Expr = fun s ->
+  (* Main parse entry point *)
+  fun parse s =
     let p = parseExpr (s, 0) in
-    let e = fstEI p in let j = sndEI p in
+    let e = fstEI p in 
+    let j = sndEI p in
     let j1 = skipSpaces (s, j) in
     if j1 = String.size s then e else raise (Fail "trailing input"),
 
-  let diff : string * Expr -> Expr = fun (x, e) ->
+  (* Symbolic differentiation *)
+  fun diff (x, e) =
     match e with
     Expr.Const _ -> Expr.Const 0.0
-    | Expr.Var v -> if String.equalsIgnoreCase v x then Expr.Const 1.0 else Expr.Const 0.0
+    | Expr.Var v -> 
+        if String.equalsIgnoreCase v x then Expr.Const 1.0 
+        else Expr.Const 0.0
     | Expr.Add (a, b) -> Expr.Add (diff (x, a), diff (x, b))
     | Expr.Sub (a, b) -> Expr.Sub (diff (x, a), diff (x, b))
-    | Expr.Mul (a, b) -> Expr.Add (Expr.Mul (diff (x, a), b), Expr.Mul (a, diff (x, b)))
-    | Expr.Div (a, b) -> Expr.Div (Expr.Sub (Expr.Mul (diff (x, a), b), Expr.Mul (a, diff (x, b))), Expr.Pow (b, Expr.Const 2.0))
+    | Expr.Mul (a, b) -> 
+        Expr.Add (Expr.Mul (diff (x, a), b), Expr.Mul (a, diff (x, b)))
+    | Expr.Div (a, b) -> 
+        Expr.Div (
+          Expr.Sub (Expr.Mul (diff (x, a), b), Expr.Mul (a, diff (x, b))), 
+          Expr.Pow (b, Expr.Const 2.0))
     | Expr.Pow (a, b) ->
         if isConstExpr b then
-          let k = constValue b in Expr.Mul (Expr.Mul (Expr.Const k, Expr.Pow (a, Expr.Const (k - 1.0))), diff (x, a))
-        else Expr.Mul (Expr.Pow (a, b), Expr.Add (Expr.Mul (diff (x, b), Expr.Log a), Expr.Div (Expr.Mul (b, diff (x, a)), a)))
+          let k = constValue b in 
+          Expr.Mul (
+            Expr.Mul (Expr.Const k, Expr.Pow (a, Expr.Const (k - 1.0))), 
+            diff (x, a))
+        else 
+          Expr.Mul (
+            Expr.Pow (a, b), 
+            Expr.Add (
+              Expr.Mul (diff (x, b), Expr.Log a), 
+              Expr.Div (Expr.Mul (b, diff (x, a)), a)))
     | Expr.Sin a -> Expr.Mul (Expr.Cos a, diff (x, a))
-    | Expr.Cos a -> Expr.Mul (Expr.Const (0.0 - 1.0), Expr.Mul (Expr.Sin a, diff (x, a)))
+    | Expr.Cos a -> 
+        Expr.Mul (Expr.Const (0.0 - 1.0), Expr.Mul (Expr.Sin a, diff (x, a)))
     | Expr.Log a -> Expr.Div (diff (x, a), a),
 
-  let isZero = fun r -> r = 0.0,
-  let isOne = fun r -> r = 1.0,
-  let isConstExpr : Expr -> bool = fun e -> match e with Expr.Const _ -> true | _ -> false,
-  let constValue : Expr -> float = fun e -> match e with Expr.Const r -> r | _ -> 0.0,
+  (* Expression analysis helpers *)
+  fun isZero r = r = 0.0,
+  fun isOne r = r = 1.0,
   
-  let simplify : Expr -> Expr = fun e ->
+  fun isConstExpr e = 
+    match e with Expr.Const _ -> true | _ -> false,
+  
+  fun constValue e = 
+    match e with Expr.Const r -> r | _ -> 0.0,
+  
+  (* Simplify expressions *)
+  fun simplify e =
     match e with
     Expr.Const r -> Expr.Const r
     | Expr.Var v -> Expr.Var v
     | Expr.Add (a, b) ->
-      let a1 = simplify a in let b1 = simplify b in
+      let a1 = simplify a in 
+      let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then let r2 = constValue b1 in Expr.Const (r1 + r2)
-        else if isZero r1 then b1 else Expr.Add (Expr.Const r1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in Expr.Const (r1 + r2)
+        else if isZero r1 then b1 
+        else Expr.Add (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then let r2 = constValue b1 in if isZero r2 then a1 else Expr.Add (a1, Expr.Const r2) else Expr.Add (a1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in 
+          if isZero r2 then a1 
+          else Expr.Add (a1, Expr.Const r2) 
+        else Expr.Add (a1, b1)
     | Expr.Sub (a, b) ->
-      let a1 = simplify a in let b1 = simplify b in
+      let a1 = simplify a in 
+      let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then let r2 = constValue b1 in Expr.Const (r1 - r2)
-        else if isZero r1 then Expr.Mul (Expr.Const (0.0 - 1.0), b1) else Expr.Sub (Expr.Const r1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in Expr.Const (r1 - r2)
+        else if isZero r1 then Expr.Mul (Expr.Const (0.0 - 1.0), b1) 
+        else Expr.Sub (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then let r2 = constValue b1 in if isZero r2 then a1 else Expr.Sub (a1, Expr.Const r2) else Expr.Sub (a1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in 
+          if isZero r2 then a1 
+          else Expr.Sub (a1, Expr.Const r2) 
+        else Expr.Sub (a1, b1)
     | Expr.Mul (a, b) ->
-      let a1 = simplify a in let b1 = simplify b in
+      let a1 = simplify a in 
+      let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then let r2 = constValue b1 in Expr.Const (r1 * r2)
-        else if isZero r1 then Expr.Const 0.0 else if isOne r1 then b1 else Expr.Mul (Expr.Const r1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in Expr.Const (r1 * r2)
+        else if isZero r1 then Expr.Const 0.0 
+        else if isOne r1 then b1 
+        else Expr.Mul (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then let r2 = constValue b1 in if isZero r2 then Expr.Const 0.0 else if isOne r2 then a1 else Expr.Mul (a1, Expr.Const r2) else Expr.Mul (a1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in 
+          if isZero r2 then Expr.Const 0.0 
+          else if isOne r2 then a1 
+          else Expr.Mul (a1, Expr.Const r2) 
+        else Expr.Mul (a1, b1)
     | Expr.Div (a, b) ->
-      let a1 = simplify a in let b1 = simplify b in
+      let a1 = simplify a in 
+      let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then let r2 = constValue b1 in if isZero r2 then raise (Fail "DivByZero") else Expr.Const (r1 / r2)
-        else if isZero r1 then Expr.Const 0.0 else Expr.Div (Expr.Const r1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in 
+          if isZero r2 then raise (Fail "DivByZero") 
+          else Expr.Const (r1 / r2)
+        else if isZero r1 then Expr.Const 0.0 
+        else Expr.Div (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then let r2 = constValue b1 in if isOne r2 then a1 else Expr.Div (a1, Expr.Const r2) else Expr.Div (a1, b1)
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in 
+          if isOne r2 then a1 
+          else Expr.Div (a1, Expr.Const r2) 
+        else Expr.Div (a1, b1)
     | Expr.Pow (a, b) ->
-      let a1 = simplify a in let b1 = simplify b in
+      let a1 = simplify a in 
+      let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then let r2 = constValue b1 in
-          if isZero r2 then Expr.Const 1.0 else if isOne r2 then Expr.Const r1
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in
+          if isZero r2 then Expr.Const 1.0 
+          else if isOne r2 then Expr.Const r1
           else if r1 > 0.0 then Expr.Const (Math.exp (r2 * Math.log r1))
           else Expr.Pow (Expr.Const r1, Expr.Const r2)
         else Expr.Pow (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then let r2 = constValue b1 in if isOne r2 then a1 else Expr.Pow (a1, Expr.Const r2) else Expr.Pow (a1, b1)
-    | Expr.Sin a -> let a1 = simplify a in if isConstExpr a1 then Expr.Const (Math.sin (constValue a1)) else Expr.Sin a1
-    | Expr.Cos a -> let a1 = simplify a in if isConstExpr a1 then Expr.Const (Math.cos (constValue a1)) else Expr.Cos a1
-    | Expr.Log a -> let a1 = simplify a in if isConstExpr a1 then let r = constValue a1 in if r <= 0.0 then raise Domain else Expr.Const (Math.log r) else Expr.Log a1,
+        if isConstExpr b1 then 
+          let r2 = constValue b1 in 
+          if isOne r2 then a1 
+          else Expr.Pow (a1, Expr.Const r2) 
+        else Expr.Pow (a1, b1)
+    | Expr.Sin a -> 
+      let a1 = simplify a in 
+      if isConstExpr a1 then Expr.Const (Math.sin (constValue a1)) 
+      else Expr.Sin a1
+    | Expr.Cos a -> 
+      let a1 = simplify a in 
+      if isConstExpr a1 then Expr.Const (Math.cos (constValue a1)) 
+      else Expr.Cos a1
+    | Expr.Log a -> 
+      let a1 = simplify a in 
+      if isConstExpr a1 then 
+        let r = constValue a1 in 
+        if r <= 0.0 then raise Domain 
+        else Expr.Const (Math.log r) 
+      else Expr.Log a1,
 
-  let prec : Expr -> int = fun e ->
+  (* Precedence for pretty printing *)
+  fun prec e =
     match e with
-    Expr.Const _ -> 4 | Expr.Var _ -> 4 | Expr.Sin _ -> 4 | Expr.Cos _ -> 4 | Expr.Log _ -> 4
+    Expr.Const _ -> 4 
+    | Expr.Var _ -> 4 
+    | Expr.Sin _ -> 4 
+    | Expr.Cos _ -> 4 
+    | Expr.Log _ -> 4
     | Expr.Pow _ -> 3
-    | Expr.Mul _ -> 2 | Expr.Div _ -> 2
-    | Expr.Add _ -> 1 | Expr.Sub _ -> 1,
+    | Expr.Mul _ -> 2 
+    | Expr.Div _ -> 2
+    | Expr.Add _ -> 1 
+    | Expr.Sub _ -> 1,
 
-  let fmtFloat : float -> string = fun r -> let s = String.ofFloat r in if String.contains "." s then s else String.concat s ".0",
-  let toStrP : Expr * int -> string = fun (e, p) ->
-        match e with
-        Expr.Const r -> fmtFloat r
-      | Expr.Var v -> v
-      | Expr.Add (a, b) -> let s = String.concat (String.concat (toStrP (a, 1)) " + ") (toStrP (b, 1)) in if p > 1 then String.concat (String.concat "(" s) ")" else s
-      | Expr.Sub (a, b) -> let s = String.concat (String.concat (toStrP (a, 1)) " - ") (toStrP (b, 1)) in if p > 1 then String.concat (String.concat "(" s) ")" else s
-      | Expr.Mul (a, b) -> let s = String.concat (String.concat (toStrP (a, 2)) " * ") (toStrP (b, 2)) in if p > 2 then String.concat (String.concat "(" s) ")" else s
-      | Expr.Div (a, b) -> let s = String.concat (String.concat (toStrP (a, 2)) " / ") (toStrP (b, 2)) in if p > 2 then String.concat (String.concat "(" s) ")" else s
-      | Expr.Pow (a, b) -> let s = String.concat (String.concat (toStrP (a, 3)) " ^ ") (toStrP (b, 3)) in if p > 3 then String.concat (String.concat "(" s) ")" else s
-      | Expr.Sin a -> String.concat (String.concat "sin(" (toStrP (a, 4))) ")"
-      | Expr.Cos a -> String.concat (String.concat "cos(" (toStrP (a, 4))) ")"
-      | Expr.Log a -> String.concat (String.concat "log(" (toStrP (a, 4))) ")",
+  (* Format float with decimal point *)
+  fun fmtFloat r = 
+    let s = String.ofFloat r in 
+    if String.contains "." s then s 
+    else String.concat s ".0",
+  
+  (* Convert expression to string with precedence *)
+  fun toStrP (e, p) =
+    match e with
+    Expr.Const r -> fmtFloat r
+    | Expr.Var v -> v
+    | Expr.Add (a, b) -> 
+      let s = String.concat (String.concat (toStrP (a, 1)) " + ") (toStrP (b, 1)) in 
+      if p > 1 then String.concat (String.concat "(" s) ")" else s
+    | Expr.Sub (a, b) -> 
+      let s = String.concat (String.concat (toStrP (a, 1)) " - ") (toStrP (b, 1)) in 
+      if p > 1 then String.concat (String.concat "(" s) ")" else s
+    | Expr.Mul (a, b) -> 
+      let s = String.concat (String.concat (toStrP (a, 2)) " * ") (toStrP (b, 2)) in 
+      if p > 2 then String.concat (String.concat "(" s) ")" else s
+    | Expr.Div (a, b) -> 
+      let s = String.concat (String.concat (toStrP (a, 2)) " / ") (toStrP (b, 2)) in 
+      if p > 2 then String.concat (String.concat "(" s) ")" else s
+    | Expr.Pow (a, b) -> 
+      let s = String.concat (String.concat (toStrP (a, 3)) " ^ ") (toStrP (b, 3)) in 
+      if p > 3 then String.concat (String.concat "(" s) ")" else s
+    | Expr.Sin a -> String.concat (String.concat "sin(" (toStrP (a, 4))) ")"
+    | Expr.Cos a -> String.concat (String.concat "cos(" (toStrP (a, 4))) ")"
+    | Expr.Log a -> String.concat (String.concat "log(" (toStrP (a, 4))) ")",
 
-  let toString : Expr -> string = fun e -> toStrP (e, 0)
+  (* Convert expression to string *)
+  fun toString e = toStrP (e, 0)
 }

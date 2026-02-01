@@ -1,0 +1,40 @@
+(* Comprehensive demonstration of fun and val syntax in structures *)
+
+structure MathUtils = {
+  (* Simple value using val keyword *)
+  val pi = 3.1415926535,
+
+  (* Simple function using fun keyword *)
+  fun square x = x * x,
+
+  (* Multiple parameter function *)
+  fun add x y = x + y,
+
+  (* Function using tuple pattern *)
+  fun hypotenuse (a, b) = Math.sqrt (square a + square b),
+
+  (* Recursive function *)
+  fun factorial n = if n = 0 then 1 else n * factorial (n - 1),
+
+  (* Function calling other member *)
+  fun sumOfSquares x y = add (square x) (square y),
+
+  (* Function with let expression *)
+  fun doubleAndAdd x y =
+    let double_x = x * 2 in
+    add double_x y,
+
+  (* Function with pattern matching *)
+  fun isPositive x = match x with
+      0 -> false
+    | _ -> if x > 0 then true else false,
+
+  (* Backward compatibility - let still works *)
+  let e = 2.71828
+}
+
+(* Open the module *)
+open MathUtils
+
+(* Test the functions - note: using expressions, not top-level val declarations *)
+square 5

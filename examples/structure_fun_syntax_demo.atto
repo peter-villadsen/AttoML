@@ -1,0 +1,51 @@
+(* Example demonstrating the new 'fun' and 'val' syntax in structures *)
+
+structure MathUtils = {
+  (* A simple value using 'val' keyword *)
+  val pi = 3.1415926535,
+
+  (* A function with one argument using 'fun' keyword *)
+  fun square x = x * x,
+
+  (* A function with multiple arguments *)
+  fun add x y = x + y,
+
+  (* A function with tuple pattern parameter *)
+  fun hypotenuse (a, b) =
+    Math.sqrt (square a + square b),
+
+  (* A recursive function using pattern matching *)
+  fun sumList xs =
+    match xs with
+        []      => 0
+      | x :: xr => x + sumList xr,
+
+  (* A function with local let bindings *)
+  fun normalize (x, y) =
+    let
+      val h = hypotenuse (x, y)
+    in
+      if h = 0.0 then (0.0, 0.0)
+      else (x / h, y / h)
+    ,
+
+  (* Function calling another structure member *)
+  fun sumOfSquares x y = add (square x) (square y),
+
+  (* Backward compatibility: 'let' syntax still works *)
+  let e = 2.71828
+}
+
+(* Open the module to use its members without qualification *)
+open MathUtils
+
+(* Test the functions *)
+val test1 = square 5            (* Should be 25 *)
+val test2 = add 10 20           (* Should be 30 *)
+val test3 = hypotenuse (3.0, 4.0)  (* Should be 5.0 *)
+val test4 = sumList [1, 2, 3, 4, 5]  (* Should be 15 *)
+val test5 = normalize (3.0, 4.0)  (* Should be (0.6, 0.8) *)
+val test6 = sumOfSquares 3 4    (* Should be 25 *)
+
+(* Print a result *)
+test1

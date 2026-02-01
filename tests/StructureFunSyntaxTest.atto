@@ -1,0 +1,14 @@
+structure MathUtils = {
+  val pi = 3.1415926535,
+  fun square x = x * x,
+  fun hypotenuse (a, b) = Math.sqrt (square a + square b),
+  fun sumList xs = match xs with [] => 0 | x :: xr => x + sumList xr,
+  fun normalize (x, y) =
+    let val h = hypotenuse (x, y) in
+    if h = 0.0 then (0.0, 0.0)
+    else (x / h, y / h)
+}
+
+open MathUtils
+
+square 5

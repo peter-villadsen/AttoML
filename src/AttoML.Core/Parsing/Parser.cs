@@ -21,8 +21,8 @@ namespace AttoML.Core.Parsing
         private Token Peek(int offset = 0) => _pos + offset < _tokens.Count ? _tokens[_pos + offset] : _tokens[^1];
         private TokenKind Kind => Peek().Kind;
         private Token Next() => _tokens[_pos++];
-        private bool Match(TokenKind kind){ if (Kind==kind){ _pos++; return true; } return false; }
-        private Token Expect(TokenKind kind){ var t=Next(); if (t.Kind!=kind) throw new Exception($"Expected {kind} but got {t.Kind}"); return t; }
+        private bool Match(TokenKind kind) { if (Kind == kind) { _pos++; return true; } return false; }
+        private Token Expect(TokenKind kind) { var t = Next(); if (t.Kind != kind) throw new Exception($"Expected {kind} but got {t.Kind}"); return t; }
 
         public (List<ModuleDecl> modules, Expr? expr) ParseCompilationUnit()
         {
@@ -670,16 +670,93 @@ namespace AttoML.Core.Parsing
             var binds = new List<Binding>();
             while (Kind != TokenKind.RBrace)
             {
-                Expect(TokenKind.Let);
-                var bn = Expect(TokenKind.Identifier).Text;
-                TypeExpr? texpr = null;
-                if (Match(TokenKind.Colon))
+                // Support val, fun, or let syntax
+                if (Kind == TokenKind.Val)
                 {
-                    texpr = ParseTypeExpr();
+                    // val name : type? = expr
+                    Expect(TokenKind.Val);
+                    var bn = Expect(TokenKind.Identifier).Text;
+                    TypeExpr? texpr = null;
+                    if (Match(TokenKind.Colon))
+                    {
+                        texpr = ParseTypeExpr();
+                    }
+                    Expect(TokenKind.Equals);
+                    var be = ParseExpr();
+                    binds.Add(new Binding(bn, texpr, be));
                 }
-                Expect(TokenKind.Equals);
-                var be = ParseExpr();
-                binds.Add(new Binding(bn, texpr, be));
+                else if (Kind == TokenKind.Fun)
+                {
+                    // fun name p1 p2 ... = body  ==>  desugared to lambda
+                    Expect(TokenKind.Fun);
+                    var bn = Expect(TokenKind.Identifier).Text;
+                    var idParams = new List<string>();
+                    var patParams = new List<Pattern?>();
+                    
+                    bool sawAnyParam = false;
+                    while (Kind == TokenKind.Identifier || Kind == TokenKind.LParen)
+                    {
+                        sawAnyParam = true;
+                        if (Kind == TokenKind.Identifier)
+                        {
+                            var p = Expect(TokenKind.Identifier).Text;
+                            idParams.Add(p);
+                            patParams.Add(null);
+                        }
+                        else
+                        {
+                            var pat = ParseParenOrTuplePattern();
+                            idParams.Add("__arg");
+                            patParams.Add(pat);
+                        }
+                    }
+                    
+                    if (!sawAnyParam)
+                    {
+                        throw new Exception("Expected at least one parameter after function name in structure");
+                    }
+                    
+                    Expect(TokenKind.Equals);
+                    var body = ParseExpr();
+                    
+                    // Desugar to nested lambdas
+                    Expr desugared = body;
+                    for (int i = idParams.Count - 1; i >= 0; i--)
+                    {
+                        var pname = idParams[i];
+                        var ppat = patParams[i];
+                        if (ppat == null)
+                        {
+                            desugared = new Fun(pname, desugared);
+                        }
+                        else
+                        {
+                            var match = new Match(new Var(pname), new List<(Pattern, Expr)> { (ppat, desugared) });
+                            desugared = new Fun(pname, match);
+                        }
+                    }
+                    
+                    binds.Add(new Binding(bn, null, desugared));
+                }
+                else if (Kind == TokenKind.Let)
+                {
+                    // let name : type? = expr (backward compatibility)
+                    Expect(TokenKind.Let);
+                    var bn = Expect(TokenKind.Identifier).Text;
+                    TypeExpr? texpr = null;
+                    if (Match(TokenKind.Colon))
+                    {
+                        texpr = ParseTypeExpr();
+                    }
+                    Expect(TokenKind.Equals);
+                    var be = ParseExpr();
+                    binds.Add(new Binding(bn, texpr, be));
+                }
+                else
+                {
+                    throw new Exception($"Expected val, fun, or let in structure body, but got {Kind}");
+                }
+                
                 if (Kind == TokenKind.Comma) Next();
             }
             Expect(TokenKind.RBrace);

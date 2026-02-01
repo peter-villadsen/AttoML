@@ -39,16 +39,25 @@ namespace AttoML.Interpreter
                 // Now evaluate all bindings - they can reference each other
                 foreach (var (bn, bexpr, _) in s.OrderedBindings)
                 {
-                    var v = Eval(bexpr, localEnv);
-                    members[bn] = v;
-                    // Update the placeholder so any closures that captured it will see the real value
-                    placeholders[bn].ActualValue = v;
-                    // Also update localEnv for subsequent bindings
-                    localEnv.Set(bn, v);
+                    try
+                    {
+                        var v = Eval(bexpr, localEnv);
+                        members[bn] = v;
+                        // Update the placeholder so any closures that captured it will see the real value
+                        placeholders[bn].ActualValue = v;
+                        // Also update localEnv for subsequent bindings
+                        localEnv.Set(bn, v);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error evaluating {s.Name}.{bn}: {ex.Message}");
+                        throw;
+                    }
                 }
                 
                 var modVal = new ModuleVal(members);
                 Modules[s.Name] = modVal;
+                Console.WriteLine($"Loaded module {s.Name} with {members.Count} members");
                 // Inject qualified names
                 foreach (var kv in members)
                 {
@@ -63,14 +72,17 @@ namespace AttoML.Interpreter
             {
                 if (d is OpenDecl od)
                 {
+                    Console.WriteLine($"Attempting to open module: {od.Name}");
                     if (!Modules.TryGetValue(od.Name, out var mv))
                     {
                         Console.WriteLine($"  Available modules: {string.Join(", ", Modules.Keys)}");
                         throw new Exception($"Unknown module {od.Name}");
                     }
+                    Console.WriteLine($"  Found module with {mv.Members.Count} members");
                     foreach (var kv in mv.Members)
                     {
                         GlobalEnv.Set(kv.Key, kv.Value);
+                        Console.WriteLine($"    Added to GlobalEnv: {kv.Key}");
                     }
                 }
             }

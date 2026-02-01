@@ -195,10 +195,7 @@ namespace AttoML.Core.Lexer
                     return new Token(TokenKind.Minus, "-", start);
             }
 
-            {
-                var context = _text.Substring(Math.Max(0, start - 10), Math.Min(20, _text.Length - Math.Max(0, start - 10)));
-                throw new Exception($"Unexpected character '{c}' (code {(int)c}) at position {start}. Context: ...{context}...");
-            }
+            throw new Exception($"Unexpected character '{c}' at position {start}");
         }
 
         private void SkipWhitespaceAndComments()
