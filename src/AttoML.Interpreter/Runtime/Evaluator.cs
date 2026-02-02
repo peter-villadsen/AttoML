@@ -57,7 +57,6 @@ namespace AttoML.Interpreter
                 
                 var modVal = new ModuleVal(members);
                 Modules[s.Name] = modVal;
-                Console.WriteLine($"Loaded module {s.Name} with {members.Count} members");
                 // Inject qualified names
                 foreach (var kv in members)
                 {
@@ -72,17 +71,13 @@ namespace AttoML.Interpreter
             {
                 if (d is OpenDecl od)
                 {
-                    Console.WriteLine($"Attempting to open module: {od.Name}");
                     if (!Modules.TryGetValue(od.Name, out var mv))
                     {
-                        Console.WriteLine($"  Available modules: {string.Join(", ", Modules.Keys)}");
                         throw new Exception($"Unknown module {od.Name}");
                     }
-                    Console.WriteLine($"  Found module with {mv.Members.Count} members");
                     foreach (var kv in mv.Members)
                     {
                         GlobalEnv.Set(kv.Key, kv.Value);
-                        Console.WriteLine($"    Added to GlobalEnv: {kv.Key}");
                     }
                 }
             }

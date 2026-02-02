@@ -70,7 +70,7 @@ Full pattern matching with `match expr with` or `case expr of` (SML-style):
 
 #### Native Modules (C#)
 - **Base**: `add`, `sub`, `mul`, `div`, `eq`, `lt`, `and`, `or`, `not`
-- **Math**: `exp`, `log`, `sin`, `cos`, `sqrt`, `atan`, `atan2` (raises `Domain`)
+- **Math**: `pi`, `exp`, `log`, `sin`, `cos`, `asin`, `acos`, `atan`, `atan2`, `sinh`, `cosh`, `tanh`, `sqrt` (raises `Domain`)
 - **List**: `append`, `map`, `filter`, `foldl`, `foldr`, `head`, `tail`, `length`, `null`
 - **String**: `concat`, `size`, `sub`, `substring`, `explode`, `implode`, `compare`
 - **Tuple**: `fst`, `snd`, `swap`, `curry`, `uncurry`, `fst3`, `snd3`, `thd3`
@@ -144,6 +144,33 @@ val it : float = 0
 
 >> 1.5 + 2.25
 val it : float = 3.75
+```
+
+### Math Module Examples
+```
+>> Math.pi
+val it : float = 3.14159265358979
+
+>> Math.sin (Math.pi / 2.0)
+val it : float = 1
+
+>> Math.asin 0.5
+val it : float = 0.523598775598299
+
+>> Math.acos 0.0
+val it : float = 1.5707963267949
+
+>> Math.sinh 1.0
+val it : float = 1.17520119364380
+
+>> Math.cosh 0.0
+val it : float = 1
+
+>> Math.tanh 0.5
+val it : float = 0.46211715726001
+
+>> let x = 2.0 in (Math.cosh x * Math.cosh x) - (Math.sinh x * Math.sinh x)
+val it : float = 1
 ```
 
 ### Lists and Pattern Matching
@@ -500,32 +527,91 @@ GitHub Actions workflow builds and tests on pushes and PRs.
 
 ## Language Comparison
 
-### SML Features Supported
-✅ Algebraic data types (`datatype`)
-✅ Pattern matching (`case`/`of`)
-✅ Anonymous functions (`fn`/`=>`)
-✅ List cons pattern (`::`)`
-✅ Record patterns
-✅ Exception handling
-✅ Module system (structures, signatures)
-✅ Hindley-Milner type inference
+### Core Language Features
 
-### SML Features Not Yet Supported
-❌ Functors (parameterized modules)
-❌ Type abbreviations (separate from ADTs)
-❌ `val rec` (use `let rec` instead)
-❌ References and mutation (`ref`, `:=`, `!`)
-❌ User-defined infix operators
-❌ Full SML Basis Library
+#### ✅ Fully Supported
+- **Algebraic data types** (`datatype` / `type`)
+- **Pattern matching** (`case`/`of`, `match`/`with`)
+  - Literal patterns, wildcards, variables
+  - Tuple and record patterns
+  - List patterns including cons (`::``)
+  - Constructor patterns
+  - Nested patterns
+- **Anonymous functions** (`fn`/`=>`, `fun`/`->`)
+- **Let bindings** with type annotations
+- **Recursive functions** (`let rec`)
+- **Exception handling** (`raise`, `handle`)
+- **Module system**
+  - Structures (`structure`)
+  - Signatures (`signature`)
+  - Signature checking
+  - Open declarations
+  - Qualified access
+- **Hindley-Milner type inference** with polymorphism
+
+#### ❌ Not Supported (vs Standard ML)
+- **Functors** (parameterized modules)
+- **Type abbreviations** (separate from ADTs)
+- **`val rec`** (use `let rec` instead)
+- **References and mutation** (`ref`, `:=`, `!`)
+- **User-defined infix operators**
+- **Lazy evaluation** and `lazy`
+- **`abstype`** declarations
+
+### Runtime Libraries
+
+#### ✅ Available
+AttoML provides a comprehensive set of functional programming libraries:
+
+**Native Modules (C#):**
+- **Base**: Core arithmetic and logical operations
+- **Math**: Constants (pi), exponential/logarithmic (exp, log), trigonometric (sin, cos, asin, acos, atan, atan2), hyperbolic (sinh, cosh, tanh), and other functions (sqrt)
+- **List**: Full suite of list operations (map, filter, fold, etc.)
+- **String**: String manipulation and conversion
+- **Tuple**: Tuple operations and currying utilities
+- **Set**: Immutable integer sets with set algebra operations
+- **Map**: Immutable integer→integer maps (dictionaries)
+
+**Prelude Modules (AttoML):**
+- **Option**: Standard option type with 11 operations
+- **Result**: Error handling with Ok/Error variants (15 operations)
+- **Complex**: Complex number arithmetic
+- **SymCalc**: Symbolic differentiation and simplification
+
+#### 🔄 Partial (vs SML Basis Library)
+- **No polymorphic collections**: Set and Map work only with `int` keys/values (not `'a`)
+- **No Array module**: Mutable arrays not supported (pure functional focus)
+- **No TextIO/BinIO**: No file I/O operations
+- **No OS/Process**: No operating system interface
+- **No Real/Int modules**: Basic numeric operations only
+- **Limited String**: Core operations present, missing advanced features
 
 ### Design Philosophy
 AttoML aims to be a **teaching language** that:
-- Captures the essence of ML-style functional programming
-- Supports modern syntax (both ML and OCaml-inspired)
-- Remains simple and understandable
-- Provides excellent type error messages
-- Focuses on pure functional programming
+- **Captures the essence** of ML-style functional programming
+- **Supports modern syntax** (both ML and OCaml-inspired styles)
+- **Remains simple** and understandable for learners
+- **Provides excellent type error messages** for education
+- **Focuses on purity** (no mutation, no I/O)
+- **Offers practical libraries** (Option, Result, Set, Map) for real programs
+- **Enables exploration** of functional concepts (closures, ADTs, pattern matching)
+
+### AttoML vs Standard ML
+
+**What AttoML Adds:**
+- Dual syntax support (ML-style `fn/case/of` + OCaml-style `fun/match/with`)
+- Modern libraries (Option, Result) as first-class prelude modules
+- Symbolic math capabilities (SymCalc, Complex)
+- Set and Map collections (simplified, integer-only)
+
+**What AttoML Omits (Intentionally):**
+- Side effects and mutation (teaching focus on pure FP)
+- I/O operations (simplifies interpreter)
+- Polymorphic collections (simplifies implementation)
+- Advanced module features (functors, abstype)
+
+AttoML is ideal for teaching functional programming concepts, type inference, and building small interpreters or symbolic computation tools.
 
 ## License
 
-[Add your license here]
+This work is provided under the MIT License.

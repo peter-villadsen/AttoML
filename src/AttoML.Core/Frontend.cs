@@ -43,13 +43,30 @@ namespace AttoML.Core
             BaseTypeEnv.Add("Base.or",  new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(boolT, boolT, boolT)));
             BaseTypeEnv.Add("Base.not", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(boolT, boolT)));
             // Math
+            // Math constants
+            BaseTypeEnv.Add("Math.pi", new Types.Scheme(Array.Empty<Types.TVar>(), floatT));
+
+            // Exponential and logarithmic
             BaseTypeEnv.Add("Math.exp", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
             BaseTypeEnv.Add("Math.log", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
+
+            // Trigonometric functions
             BaseTypeEnv.Add("Math.sin", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
             BaseTypeEnv.Add("Math.cos", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
-            BaseTypeEnv.Add("Math.sqrt", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
             BaseTypeEnv.Add("Math.atan", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
             BaseTypeEnv.Add("Math.atan2", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(floatT, floatT, floatT)));
+
+            // Inverse trigonometric functions
+            BaseTypeEnv.Add("Math.asin", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
+            BaseTypeEnv.Add("Math.acos", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
+
+            // Hyperbolic functions
+            BaseTypeEnv.Add("Math.sinh", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
+            BaseTypeEnv.Add("Math.cosh", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
+            BaseTypeEnv.Add("Math.tanh", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
+
+            // Other functions
+            BaseTypeEnv.Add("Math.sqrt", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, floatT)));
 
             // List module polymorphic functions
             var a = new Types.TVar();
