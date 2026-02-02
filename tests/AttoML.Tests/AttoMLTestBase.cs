@@ -12,9 +12,11 @@ namespace AttoML.Tests
         protected (Frontend frontend, Evaluator evaluator, Expr? expr, AttoML.Core.Types.Type? type) CompileAndInitialize(string source)
         {
             var frontend = new Frontend();
+            LoadPrelude(frontend, evaluator: null!);
             var (decls, mods, expr, type) = frontend.Compile(source);
             var evaluator = new Evaluator();
             LoadBuiltins(evaluator);
+            LoadPrelude(frontend, evaluator);
             evaluator.LoadModules(mods);
             evaluator.LoadAdts(mods);
             return (frontend, evaluator, expr, type);
@@ -23,9 +25,11 @@ namespace AttoML.Tests
         protected (Frontend frontend, Evaluator evaluator, List<ModuleDecl> decls, ModuleSystem mods, Expr? expr, AttoML.Core.Types.Type? type) CompileAndInitializeFull(string source)
         {
             var frontend = new Frontend();
+            LoadPrelude(frontend, evaluator: null!);
             var (decls, mods, expr, type) = frontend.Compile(source);
             var evaluator = new Evaluator();
             LoadBuiltins(evaluator);
+            LoadPrelude(frontend, evaluator);
             evaluator.LoadModules(mods);
             evaluator.LoadAdts(mods);
             return (frontend, evaluator, decls, mods, expr, type);
@@ -64,6 +68,42 @@ namespace AttoML.Tests
             foreach (var kv in stringMod.Members)
             {
                 ev.GlobalEnv.Set($"String.{kv.Key}", kv.Value);
+            }
+            var tupleMod = AttoML.Interpreter.Builtins.TupleModule.Build();
+            ev.Modules["Tuple"] = tupleMod;
+            foreach (var kv in tupleMod.Members)
+            {
+                ev.GlobalEnv.Set($"Tuple.{kv.Key}", kv.Value);
+            }
+        }
+
+        private static void LoadPrelude(Frontend frontend, Evaluator evaluator)
+        {
+            var optionPath = System.IO.Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "AttoML.Interpreter", "Prelude", "Option.atto");
+            var optionSrc = System.IO.File.ReadAllText(optionPath);
+            var (pDecls, pMods, _, _) = frontend.Compile(optionSrc);
+
+            if (evaluator != null)
+            {
+                evaluator.LoadAdts(pMods);
+                evaluator.LoadModules(pMods);
+            }
+
+            // Inject structure member types into BaseTypeEnv for type checking
+            var ti = new AttoML.Core.Types.TypeInference();
+            var tempEnv = pMods.InjectStructuresInto(frontend.BaseTypeEnv, ti, null);
+
+            // Copy the qualified names from tempEnv to BaseTypeEnv
+            foreach (var s in pMods.Structures.Values)
+            {
+                foreach (var (bn, _, _) in s.OrderedBindings)
+                {
+                    var qname = $"{s.Name}.{bn}";
+                    if (tempEnv.TryGet(qname, out var scheme))
+                    {
+                        frontend.BaseTypeEnv.Add(qname, scheme);
+                    }
+                }
             }
         }
     }

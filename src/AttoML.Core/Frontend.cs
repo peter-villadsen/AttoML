@@ -88,6 +88,30 @@ namespace AttoML.Core
             BaseTypeEnv.Add("String.toInt", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, intT)));
             BaseTypeEnv.Add("String.toFloat", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, floatT)));
 
+            // Tuple module
+            var t1 = new Types.TVar();
+            var t2 = new Types.TVar();
+            var t3 = new Types.TVar();
+            var t4 = new Types.TVar();
+            var t5 = new Types.TVar();
+            var t6 = new Types.TVar();
+            // fst : ('a * 'b) -> 'a
+            BaseTypeEnv.Add("Tuple.fst", new Types.Scheme(new[] { t1, t2 }, new Types.TFun(new Types.TTuple(new[] { t1, t2 }), t1)));
+            // snd : ('a * 'b) -> 'b
+            BaseTypeEnv.Add("Tuple.snd", new Types.Scheme(new[] { t1, t2 }, new Types.TFun(new Types.TTuple(new[] { t1, t2 }), t2)));
+            // swap : ('a * 'b) -> ('b * 'a)
+            BaseTypeEnv.Add("Tuple.swap", new Types.Scheme(new[] { t1, t2 }, new Types.TFun(new Types.TTuple(new[] { t1, t2 }), new Types.TTuple(new[] { t2, t1 }))));
+            // curry : (('a * 'b) -> 'c) -> 'a -> 'b -> 'c
+            BaseTypeEnv.Add("Tuple.curry", new Types.Scheme(new[] { t1, t2, t3 }, new Types.TFun(new Types.TFun(new Types.TTuple(new[] { t1, t2 }), t3), new Types.TFun(t1, new Types.TFun(t2, t3)))));
+            // uncurry : ('a -> 'b -> 'c) -> ('a * 'b) -> 'c
+            BaseTypeEnv.Add("Tuple.uncurry", new Types.Scheme(new[] { t1, t2, t3 }, new Types.TFun(new Types.TFun(t1, new Types.TFun(t2, t3)), new Types.TFun(new Types.TTuple(new[] { t1, t2 }), t3))));
+            // fst3 : ('a * 'b * 'c) -> 'a
+            BaseTypeEnv.Add("Tuple.fst3", new Types.Scheme(new[] { t4, t5, t6 }, new Types.TFun(new Types.TTuple(new[] { t4, t5, t6 }), t4)));
+            // snd3 : ('a * 'b * 'c) -> 'b
+            BaseTypeEnv.Add("Tuple.snd3", new Types.Scheme(new[] { t4, t5, t6 }, new Types.TFun(new Types.TTuple(new[] { t4, t5, t6 }), t5)));
+            // thd3 : ('a * 'b * 'c) -> 'c
+            BaseTypeEnv.Add("Tuple.thd3", new Types.Scheme(new[] { t4, t5, t6 }, new Types.TFun(new Types.TTuple(new[] { t4, t5, t6 }), t6)));
+
             // Do not pre-register module-specific functions like SymCalc.* in the base env.
             // Their types are inferred from the prelude modules during compilation.
 

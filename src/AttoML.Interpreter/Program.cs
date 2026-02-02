@@ -312,6 +312,12 @@ namespace AttoML.Interpreter
 			{
 				evaluator.GlobalEnv.Set($"String.{kv.Key}", kv.Value);
 			}
+			var tupleMod = TupleModule.Build();
+			evaluator.Modules["Tuple"] = tupleMod;
+			foreach (var kv in tupleMod.Members)
+			{
+				evaluator.GlobalEnv.Set($"Tuple.{kv.Key}", kv.Value);
+			}
 			// Also open Base by default for convenience
 			foreach (var kv in baseMod.Members)
 			{
@@ -400,6 +406,7 @@ namespace AttoML.Interpreter
 					if (verbose) Console.WriteLine($"[PRELUDE] Skipping {filename} - file is empty or not found");
 				}
 			}
+			LoadOne("Option.atto");
 			LoadOne("Complex.atto");
 			LoadOne("SymCalc.atto");
 		}

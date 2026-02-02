@@ -299,10 +299,17 @@ namespace AttoML.Core.Parsing
 
         private Expr ParseApp()
         {
+            // Check for termination conditions before trying to parse an atom
+            // This handles cases where we're at a Bar token inside a match expression
+            if (_insideMatchDepth > 0 && Kind == TokenKind.Bar)
+            {
+                throw new Exception($"Unexpected token {Kind} at start of expression");
+            }
+
             var expr = ParseAtom();
             while (true)
             {
-                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || Kind == TokenKind.Of || (_insideMatchDepth == 1 && Kind == TokenKind.Bar))
+                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || Kind == TokenKind.Of || (_insideMatchDepth > 0 && Kind == TokenKind.Bar))
                 {
                     break;
                 }
@@ -451,10 +458,16 @@ namespace AttoML.Core.Parsing
         // Parse an expression like ParseApp, but stop before consuming relational/equality/short-circuit operators
         private Expr ParseNoRelational()
         {
+            // Check for termination conditions before trying to parse an atom
+            if (_insideMatchDepth > 0 && Kind == TokenKind.Bar)
+            {
+                throw new Exception($"Unexpected token {Kind} at start of expression");
+            }
+
             var expr = ParseAtom();
             while (true)
             {
-                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || (_insideMatchDepth == 1 && Kind == TokenKind.Bar))
+                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || (_insideMatchDepth > 0 && Kind == TokenKind.Bar))
                 {
                     break;
                 }

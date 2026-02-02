@@ -1,0 +1,62 @@
+(* Option Module - Standard option type and operations *)
+
+datatype Option = Some of int | None
+
+structure Option = {
+    (* Type checks *)
+    fun isSome opt = case opt of
+        Some _ -> true
+      | None -> false,
+
+    fun isNone opt = case opt of
+        Some _ -> false
+      | None -> true,
+
+    (* Get value with default *)
+    fun getOr opt default = case opt of
+        Some x -> x
+      | None -> default,
+
+    (* Map over option *)
+    fun map f opt = case opt of
+        Some x -> Some (f x)
+      | None -> None,
+
+    (* Bind/flatMap for option *)
+    fun bind f opt = case opt of
+        Some x -> f x
+      | None -> None,
+
+    (* Filter option by predicate *)
+    fun filter pred opt = case opt of
+        Some x -> if pred x then Some x else None
+      | None -> None,
+
+    (* Fold over option *)
+    fun fold f default opt = case opt of
+        Some x -> f x
+      | None -> default,
+
+    (* Convert option to list *)
+    fun toList opt = case opt of
+        Some x -> [x]
+      | None -> [],
+
+    (* Convert list to option (head if non-empty) *)
+    fun fromList lst = case lst of
+        h::_ -> Some h
+      | [] -> None,
+
+    (* Combine two options with a function *)
+    fun map2 f opt1 opt2 =
+        case opt1 of
+            Some x -> (case opt2 of
+                Some y -> Some (f x y)
+              | None -> None)
+          | None -> None,
+
+    (* Return first Some, or None if both None *)
+    fun orElse opt1 opt2 = case opt1 of
+        Some _ -> opt1
+      | None -> opt2
+}
