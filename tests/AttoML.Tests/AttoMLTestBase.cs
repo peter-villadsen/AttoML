@@ -75,6 +75,18 @@ namespace AttoML.Tests
             {
                 ev.GlobalEnv.Set($"Tuple.{kv.Key}", kv.Value);
             }
+            var setMod = AttoML.Interpreter.Builtins.SetModule.Build();
+            ev.Modules["Set"] = setMod;
+            foreach (var kv in setMod.Members)
+            {
+                ev.GlobalEnv.Set($"Set.{kv.Key}", kv.Value);
+            }
+            var mapMod = AttoML.Interpreter.Builtins.MapModule.Build();
+            ev.Modules["Map"] = mapMod;
+            foreach (var kv in mapMod.Members)
+            {
+                ev.GlobalEnv.Set($"Map.{kv.Key}", kv.Value);
+            }
         }
 
         private static void LoadPrelude(Frontend frontend, Evaluator evaluator)

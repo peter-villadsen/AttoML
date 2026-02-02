@@ -78,6 +78,26 @@ namespace AttoML.Interpreter.Runtime
         public override string ToString() => "[" + string.Join(", ", Items.Select(x => x.ToString())) + "]";
     }
 
+    public sealed class SetVal : Value
+    {
+        public HashSet<int> Elements;
+        public SetVal(HashSet<int> elements)
+        {
+            Elements = elements;
+        }
+        public override string ToString() => "{" + string.Join(", ", Elements.OrderBy(x => x)) + "}";
+    }
+
+    public sealed class MapVal : Value
+    {
+        public Dictionary<int, int> Entries;
+        public MapVal(Dictionary<int, int> entries)
+        {
+            Entries = entries;
+        }
+        public override string ToString() => "{" + string.Join(", ", Entries.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key} -> {kv.Value}")) + "}";
+    }
+
     public sealed class RecordVal : Value
     {
         public IReadOnlyDictionary<string, Value> Fields;

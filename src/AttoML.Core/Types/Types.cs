@@ -28,6 +28,8 @@ namespace AttoML.Core.Types
         public static readonly TConst String = new("string");
         public static readonly TConst Unit = new("unit");
         public static readonly TConst Exn = new("exn");
+        public static readonly TConst Set = new("Set");
+        public static readonly TConst Map = new("Map");
     }
 
     public sealed class TFun : Type

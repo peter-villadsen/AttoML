@@ -318,6 +318,18 @@ namespace AttoML.Interpreter
 			{
 				evaluator.GlobalEnv.Set($"Tuple.{kv.Key}", kv.Value);
 			}
+			var setMod = SetModule.Build();
+			evaluator.Modules["Set"] = setMod;
+			foreach (var kv in setMod.Members)
+			{
+				evaluator.GlobalEnv.Set($"Set.{kv.Key}", kv.Value);
+			}
+			var mapMod = MapModule.Build();
+			evaluator.Modules["Map"] = mapMod;
+			foreach (var kv in mapMod.Members)
+			{
+				evaluator.GlobalEnv.Set($"Map.{kv.Key}", kv.Value);
+			}
 			// Also open Base by default for convenience
 			foreach (var kv in baseMod.Members)
 			{

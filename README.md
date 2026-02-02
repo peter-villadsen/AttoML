@@ -74,6 +74,8 @@ Full pattern matching with `match expr with` or `case expr of` (SML-style):
 - **List**: `append`, `map`, `filter`, `foldl`, `foldr`, `head`, `tail`, `length`, `null`
 - **String**: `concat`, `size`, `sub`, `substring`, `explode`, `implode`, `compare`
 - **Tuple**: `fst`, `snd`, `swap`, `curry`, `uncurry`, `fst3`, `snd3`, `thd3`
+- **Set**: `empty`, `singleton`, `add`, `remove`, `contains`, `size`, `isEmpty`, `union`, `intersect`, `diff`, `isSubset`, `toList`, `fromList`
+- **Map**: `empty`, `singleton`, `add`, `remove`, `get`, `contains`, `size`, `isEmpty`, `keys`, `values`, `toList`, `fromList`, `mapValues`, `fold`
 
 #### Prelude Modules (AttoML)
 - **Option**: `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`
@@ -373,6 +375,72 @@ val it : int = 42
 ```
 
 Functions: `isOk`, `isError`, `getOr`, `getError`, `map`, `mapError`, `bind`, `andThen`, `orElse`, `fold`, `toOption`, `errorToOption`, `map2`, `andAlso`, `orElse2`
+
+### Set Module
+
+Provides immutable sets of integers with efficient operations:
+
+```ml
+>> let s1 = Set.add 2 (Set.singleton 1) in
+   let s2 = Set.add 3 (Set.add 2 Set.empty) in
+   Set.union s1 s2
+val it : Set = {1, 2, 3}
+
+>> Set.contains 2 (Set.fromList [1, 2, 3])
+val it : bool = true
+
+>> let s1 = Set.fromList [1, 2, 3] in
+   let s2 = Set.fromList [2, 3, 4] in
+   Set.intersect s1 s2
+val it : Set = {2, 3}
+
+>> let s1 = Set.fromList [1, 2, 3] in
+   let s2 = Set.fromList [2, 3] in
+   Set.isSubset s2 s1
+val it : bool = true
+
+>> Set.size (Set.fromList [1, 2, 3, 2, 1])
+val it : int = 3
+
+>> Set.toList (Set.diff (Set.fromList [1, 2, 3]) (Set.fromList [2]))
+val it : [int] = [1, 3]
+```
+
+Functions: `empty`, `singleton`, `add`, `remove`, `contains`, `size`, `isEmpty`, `union`, `intersect`, `diff`, `isSubset`, `toList`, `fromList`
+
+### Map Module
+
+Provides immutable maps (dictionaries) with integer keys and integer values:
+
+```ml
+>> let m = Map.add 2 20 (Map.singleton 1 10) in
+   Map.get 1 m
+val it : Option = <Some 10>
+
+>> Map.get 3 (Map.singleton 1 10)
+val it : Option = <None>
+
+>> let m = Map.fromList [(1, 10), (2, 20), (3, 30)] in
+   Map.size m
+val it : int = 3
+
+>> let m = Map.fromList [(1, 10), (2, 20)] in
+   Map.keys m
+val it : [int] = [1, 2]
+
+>> let m = Map.fromList [(1, 10), (2, 20)] in
+   Map.mapValues (fn x => x * 2) m
+val it : Map = {1 -> 20, 2 -> 40}
+
+>> let m = Map.fromList [(1, 10), (2, 20)] in
+   Map.fold (fn k => fn v => fn acc => acc + v) 0 m
+val it : int = 30
+
+>> Map.toList (Map.remove 2 (Map.fromList [(1, 10), (2, 20), (3, 30)]))
+val it : [(int * int)] = [(1, 10), (3, 30)]
+```
+
+Functions: `empty`, `singleton`, `add`, `remove`, `get`, `contains`, `size`, `isEmpty`, `keys`, `values`, `toList`, `fromList`, `mapValues`, `fold`
 
 ## Architecture
 
