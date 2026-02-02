@@ -387,7 +387,7 @@ namespace AttoML.Tests
 		[Fact]
 		public void OptionModule_Fold_WithSome()
 		{
-			var src = @"Option.fold (fn x => x * 3) 0 (Some 14)";
+			var src = @"Option.fold (fn x => x * 3) (fn _ => 0) (Some 14)";
 			var (_, ev, expr, _) = CompileAndInitialize(src);
 			var v = ev.Eval(expr!, ev.GlobalEnv);
 			Assert.IsType<IntVal>(v);
@@ -397,7 +397,7 @@ namespace AttoML.Tests
 		[Fact]
 		public void OptionModule_Fold_WithNone()
 		{
-			var src = @"Option.fold (fn x => x * 3) 99 None";
+			var src = @"Option.fold (fn x => x * 3) (fn _ => 99) None";
 			var (_, ev, expr, _) = CompileAndInitialize(src);
 			var v = ev.Eval(expr!, ev.GlobalEnv);
 			Assert.IsType<IntVal>(v);

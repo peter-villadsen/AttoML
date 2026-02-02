@@ -33,9 +33,9 @@ structure Option = {
       | None -> None,
 
     (* Fold over option *)
-    fun fold f default opt = case opt of
-        Some x -> f x
-      | None -> default,
+    fun fold onSome onNone opt = case opt of
+        Some x -> onSome x
+      | None -> onNone (),
 
     (* Convert option to list *)
     fun toList opt = case opt of

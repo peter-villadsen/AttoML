@@ -79,32 +79,38 @@ namespace AttoML.Tests
 
         private static void LoadPrelude(Frontend frontend, Evaluator evaluator)
         {
-            var optionPath = System.IO.Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "AttoML.Interpreter", "Prelude", "Option.atto");
-            var optionSrc = System.IO.File.ReadAllText(optionPath);
-            var (pDecls, pMods, _, _) = frontend.Compile(optionSrc);
-
-            if (evaluator != null)
+            void LoadPreludeFile(string filename)
             {
-                evaluator.LoadAdts(pMods);
-                evaluator.LoadModules(pMods);
-            }
+                var path = System.IO.Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "AttoML.Interpreter", "Prelude", filename);
+                var src = System.IO.File.ReadAllText(path);
+                var (pDecls, pMods, _, _) = frontend.Compile(src);
 
-            // Inject structure member types into BaseTypeEnv for type checking
-            var ti = new AttoML.Core.Types.TypeInference();
-            var tempEnv = pMods.InjectStructuresInto(frontend.BaseTypeEnv, ti, null);
-
-            // Copy the qualified names from tempEnv to BaseTypeEnv
-            foreach (var s in pMods.Structures.Values)
-            {
-                foreach (var (bn, _, _) in s.OrderedBindings)
+                if (evaluator != null)
                 {
-                    var qname = $"{s.Name}.{bn}";
-                    if (tempEnv.TryGet(qname, out var scheme))
+                    evaluator.LoadAdts(pMods);
+                    evaluator.LoadModules(pMods);
+                }
+
+                // Inject structure member types into BaseTypeEnv for type checking
+                var ti = new AttoML.Core.Types.TypeInference();
+                var tempEnv = pMods.InjectStructuresInto(frontend.BaseTypeEnv, ti, null);
+
+                // Copy the qualified names from tempEnv to BaseTypeEnv
+                foreach (var s in pMods.Structures.Values)
+                {
+                    foreach (var (bn, _, _) in s.OrderedBindings)
                     {
-                        frontend.BaseTypeEnv.Add(qname, scheme);
+                        var qname = $"{s.Name}.{bn}";
+                        if (tempEnv.TryGet(qname, out var scheme))
+                        {
+                            frontend.BaseTypeEnv.Add(qname, scheme);
+                        }
                     }
                 }
             }
+
+            LoadPreludeFile("Option.atto");
+            LoadPreludeFile("Result.atto");
         }
     }
 }

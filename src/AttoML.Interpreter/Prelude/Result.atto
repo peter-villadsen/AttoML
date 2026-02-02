@@ -1,0 +1,83 @@
+(* Result Module - Error handling with Ok/Error variants *)
+
+datatype Result = Ok of int | Error of int
+
+structure Result = {
+    (* Check if result is Ok *)
+    fun isOk res = case res of
+        Ok _ -> true
+      | Error _ -> false,
+
+    (* Check if result is Error *)
+    fun isError res = case res of
+        Ok _ -> false
+      | Error _ -> true,
+
+    (* Get value with default *)
+    fun getOr res default = case res of
+        Ok x -> x
+      | Error _ -> default,
+
+    (* Get error with default *)
+    fun getError res default = case res of
+        Ok _ -> default
+      | Error e -> e,
+
+    (* Map over Ok value *)
+    fun map f res = case res of
+        Ok x -> Ok (f x)
+      | Error e -> Error e,
+
+    (* Map over Error value *)
+    fun mapError f res = case res of
+        Ok x -> Ok x
+      | Error e -> Error (f e),
+
+    (* Bind/flatMap for result *)
+    fun bind f res = case res of
+        Ok x -> f x
+      | Error e -> Error e,
+
+    (* Chain results (alias for bind) *)
+    fun andThen f res = case res of
+        Ok x -> f x
+      | Error e -> Error e,
+
+    (* Provide alternative on Error *)
+    fun orElse res alt = case res of
+        Ok _ -> res
+      | Error _ -> alt,
+
+    (* Fold over result *)
+    fun fold onOk onError res = case res of
+        Ok x -> onOk x
+      | Error e -> onError e,
+
+    (* Convert Ok to Option *)
+    fun toOption res = case res of
+        Ok x -> Some x
+      | Error _ -> None,
+
+    (* Convert Error to Option *)
+    fun errorToOption res = case res of
+        Ok _ -> None
+      | Error e -> Some e,
+
+    (* Combine two results *)
+    fun map2 f res1 res2 =
+        case res1 of
+            Ok x -> (case res2 of
+                Ok y -> Ok (f x y)
+              | Error e -> Error e)
+          | Error e -> Error e,
+
+    (* Return first Error, or Ok if both Ok *)
+    fun andAlso res1 res2 = case res1 of
+        Ok _ -> res2
+      | Error e -> Error e,
+
+    (* Return first Ok, or last Error if both Error *)
+    fun orElse2 res1 res2 = case res1 of
+        Ok x -> Ok x
+      | Error _ -> res2
+}

@@ -67,11 +67,18 @@ Full pattern matching with `match expr with` or `case expr of` (SML-style):
 - **Built-ins**: `Div` (division by zero), `Domain` (invalid math), `Fail of string`
 
 ### Built-in Modules
+
+#### Native Modules (C#)
 - **Base**: `add`, `sub`, `mul`, `div`, `eq`, `lt`, `and`, `or`, `not`
 - **Math**: `exp`, `log`, `sin`, `cos`, `sqrt`, `atan`, `atan2` (raises `Domain`)
 - **List**: `append`, `map`, `filter`, `foldl`, `foldr`, `head`, `tail`, `length`, `null`
 - **String**: `concat`, `size`, `sub`, `substring`, `explode`, `implode`, `compare`
-- **Complex** (prelude): Complex number arithmetic written in AttoML
+- **Tuple**: `fst`, `snd`, `swap`, `curry`, `uncurry`, `fst3`, `snd3`, `thd3`
+
+#### Prelude Modules (AttoML)
+- **Option**: `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`
+- **Result**: `isOk`, `isError`, `getOr`, `getError`, `map`, `mapError`, `bind`, `andThen`, `orElse`, `fold`, `toOption`, `errorToOption`, `map2`, `andAlso`, `orElse2`
+- **Complex**: Complex number arithmetic (`add`, `sub`, `mul`, `conj`, `magnitude`, `ofPolar`, `toPolar`)
 
 ## SML Compatibility
 
@@ -282,6 +289,90 @@ Type: `datatype Complex = C of float * float`
 Operations: `add`, `sub`, `mul`, `conj`, `magnitude`, `magnitudeSquared`, `ofPolar`, `toPolar`
 
 See `samples/complex_demo.atto` for examples.
+
+## Runtime Libraries
+
+### Tuple Module
+
+Provides operations on tuples (pairs and triples):
+
+```ml
+>> Tuple.fst (1, 2)
+val it : int = 1
+
+>> Tuple.snd (1, 2)
+val it : int = 2
+
+>> Tuple.swap (1, 2)
+val it : (int * int) = (2, 1)
+
+>> let addPair = fn (x, y) => x + y in
+   let curriedAdd = Tuple.curry addPair in
+   curriedAdd 3 5
+val it : int = 8
+
+>> Tuple.fst3 (1, 2, 3)
+val it : int = 1
+```
+
+Functions: `fst`, `snd`, `swap`, `curry`, `uncurry`, `fst3`, `snd3`, `thd3`
+
+### Option Module
+
+Provides the `Option` type for representing optional values:
+
+```ml
+>> datatype Option = Some of int | None
+>> Option.isSome (Some 42)
+val it : bool = true
+
+>> Option.getOr None 99
+val it : int = 99
+
+>> Option.map (fn x => x * 2) (Some 21)
+val it : Option = <Some 42>
+
+>> Option.filter (fn x => x > 10) (Some 42)
+val it : Option = <Some 42>
+
+>> Option.filter (fn x => x > 50) (Some 42)
+val it : Option = <None>
+
+>> Option.toList (Some 42)
+val it : [int] = [42]
+
+>> Option.fromList [1, 2, 3]
+val it : Option = <Some 1>
+```
+
+Functions: `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`
+
+### Result Module
+
+Provides the `Result` type for error handling with Ok/Error variants:
+
+```ml
+>> datatype Result = Ok of int | Error of int
+>> Result.isOk (Ok 42)
+val it : bool = true
+
+>> Result.getOr (Error 1) 99
+val it : int = 99
+
+>> Result.map (fn x => x * 2) (Ok 21)
+val it : Result = <Ok 42>
+
+>> Result.mapError (fn e => e + 100) (Error 1)
+val it : Result = <Error 101>
+
+>> Result.bind (fn x => if x > 0 then Ok (x * 2) else Error 1) (Ok 21)
+val it : Result = <Ok 42>
+
+>> Result.fold (fn x => x + 10) (fn e => 0) (Ok 32)
+val it : int = 42
+```
+
+Functions: `isOk`, `isError`, `getOr`, `getError`, `map`, `mapError`, `bind`, `andThen`, `orElse`, `fold`, `toOption`, `errorToOption`, `map2`, `andAlso`, `orElse2`
 
 ## Architecture
 

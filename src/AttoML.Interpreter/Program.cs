@@ -407,6 +407,7 @@ namespace AttoML.Interpreter
 				}
 			}
 			LoadOne("Option.atto");
+			LoadOne("Result.atto");
 			LoadOne("Complex.atto");
 			LoadOne("SymCalc.atto");
 		}
