@@ -1,0 +1,52 @@
+(* Phase 1 Feature Tests *)
+
+(* Test 1: fn keyword with => arrow *)
+val test_fn_simple = fn x => x + 1
+
+(* Test 2: fn keyword with -> arrow (backward compat) *)
+val test_fn_compat = fn x -> x * 2
+
+(* Test 3: fun keyword with => arrow *)
+val test_fun_arrow = fun x => x - 1
+
+(* Test 4: case/of syntax *)
+datatype Option = Some of int | None
+
+val test_case = case Some 42 of
+    Some x => x
+  | None => 0
+
+(* Test 5: match/with syntax (backward compat) *)
+val test_match = match Some 99 with
+    Some x -> x
+  | None -> 0
+
+(* Test 6: andalso keyword *)
+val test_andalso = true andalso false
+
+(* Test 7: andthen keyword (backward compat) *)
+val test_andthen = true andthen false
+
+(* Test 8: Nested case with fn *)
+val test_nested = case Some 10 of
+    Some n => (fn x => x + n) 5
+  | None => 0
+
+(* Test 9: case with tuple pattern *)
+val test_tuple = case (1, 2) of
+    (a, b) => a + b
+
+(* Test 10: fn with tuple pattern *)
+val test_fn_tuple = (fn (x, y) => x * y) (3, 4)
+
+(* Print test results *)
+test_fn_simple 5
+test_fn_compat 5
+test_fun_arrow 5
+test_case
+test_match
+test_andalso
+test_andthen
+test_nested
+test_tuple
+test_fn_tuple

@@ -140,6 +140,11 @@ namespace AttoML.Core.Lexer
                     return new Token(TokenKind.ModuleQualifiedSep, ".", start);
                 case ':':
                     Advance();
+                    if (!IsEOF && Peek() == ':')
+                    {
+                        Advance();
+                        return new Token(TokenKind.ColonColon, "::", start);
+                    }
                     return new Token(TokenKind.Colon, ":", start);
                 case '=':
                     Advance();
@@ -147,6 +152,11 @@ namespace AttoML.Core.Lexer
                     {
                         Advance();
                         return new Token(TokenKind.EqEq, "==", start);
+                    }
+                    if (!IsEOF && Peek() == '>')
+                    {
+                        Advance();
+                        return new Token(TokenKind.FatArrow, "=>", start);
                     }
                     return new Token(TokenKind.Equals, "=", start);
                 case '!':
@@ -279,6 +289,7 @@ namespace AttoML.Core.Lexer
                 "rec" => TokenKind.Rec,
                 "in" => TokenKind.In,
                 "fun" => TokenKind.Fun,
+                "fn" => TokenKind.Fn,
                 "if" => TokenKind.If,
                 "then" => TokenKind.Then,
                 "else" => TokenKind.Else,
@@ -287,8 +298,10 @@ namespace AttoML.Core.Lexer
                 "signature" => TokenKind.Signature,
                 "val" => TokenKind.Val,
                 "match" => TokenKind.Match,
+                "case" => TokenKind.Case,
                 "with" => TokenKind.With,
                 "andthen" => TokenKind.AndThen,
+                "andalso" => TokenKind.AndThen,
                 "orelse" => TokenKind.OrElse,
                 _ => TokenKind.Identifier,
             };

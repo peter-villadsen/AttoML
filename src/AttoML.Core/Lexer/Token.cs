@@ -14,12 +14,14 @@ namespace AttoML.Core.Lexer
         // Keywords
         Match,
         With,
+        Case,
         Type,
         Of,
         Let,
         Rec,
         In,
         Fun,
+        Fn,
         If,
         Then,
         Else,
@@ -44,11 +46,13 @@ namespace AttoML.Core.Lexer
         RBracket,
         Comma,
         Arrow, // '->'
+        FatArrow, // '=>'
         Equals, // '='
         EqEq,   // '=='
         BangEq, // '!='
         NotEqual, // '<>'
         Colon,
+        ColonColon, // '::'
         At,    // '@'
         Bar,   // '|'
         LessThan, // '<'

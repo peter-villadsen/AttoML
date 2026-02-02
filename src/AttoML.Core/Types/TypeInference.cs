@@ -255,6 +255,36 @@ namespace AttoML.Core.Types
                         return;
                     }
                     throw new Exception($"Invalid constructor type for '{cname}'");
+                case PList pl:
+                    var elemType = FreshVar();
+                    var listType = new TList(elemType);
+                    subst.Compose(Unify(scrutineeType, listType));
+                    foreach (var item in pl.Items)
+                    {
+                        InferPattern(env, subst, subst.Apply(elemType), item);
+                    }
+                    return;
+                case PListCons plc:
+                    var headType = FreshVar();
+                    var tailType = new TList(headType);
+                    subst.Compose(Unify(scrutineeType, tailType));
+                    InferPattern(env, subst, subst.Apply(headType), plc.Head);
+                    InferPattern(env, subst, subst.Apply(tailType), plc.Tail);
+                    return;
+                case PRecord pr:
+                    var fieldTypes = new Dictionary<string, Type>();
+                    foreach (var (fieldName, fieldPat) in pr.Fields)
+                    {
+                        var ft = FreshVar();
+                        fieldTypes[fieldName] = ft;
+                    }
+                    var recordType = new TRecord(fieldTypes);
+                    subst.Compose(Unify(scrutineeType, recordType));
+                    foreach (var (fieldName, fieldPat) in pr.Fields)
+                    {
+                        InferPattern(env, subst, subst.Apply(fieldTypes[fieldName]), fieldPat);
+                    }
+                    return;
                 default:
                     throw new NotSupportedException($"Unsupported pattern {pat.GetType().Name}");
             }

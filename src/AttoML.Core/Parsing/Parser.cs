@@ -24,6 +24,19 @@ namespace AttoML.Core.Parsing
         private bool Match(TokenKind kind) { if (Kind == kind) { _pos++; return true; } return false; }
         private Token Expect(TokenKind kind) { var t = Next(); if (t.Kind != kind) throw new Exception($"Expected {kind} but got {t.Kind}"); return t; }
 
+        // Helper to accept either -> or => for backward compatibility
+        private void ExpectArrow()
+        {
+            if (Kind == TokenKind.Arrow || Kind == TokenKind.FatArrow)
+            {
+                Next();
+            }
+            else
+            {
+                throw new Exception($"Expected '->' or '=>' but got {Kind}");
+            }
+        }
+
         public (List<ModuleDecl> modules, Expr? expr) ParseCompilationUnit()
         {
             var modules = new List<ModuleDecl>();
@@ -156,8 +169,12 @@ namespace AttoML.Core.Parsing
                 return ParseIfThenElse();
             if (Kind == TokenKind.Fun)
                 return ParseFun();
+            if (Kind == TokenKind.Fn)
+                return ParseFn();
             if (Kind == TokenKind.Match)
                 return ParseMatch();
+            if (Kind == TokenKind.Case)
+                return ParseCase();
             if (Kind == TokenKind.Raise)
                 return ParseRaise();
             return ParseApp();
@@ -234,7 +251,7 @@ namespace AttoML.Core.Parsing
             if (Kind == TokenKind.Identifier)
             {
                 var param = Expect(TokenKind.Identifier).Text;
-                Expect(TokenKind.Arrow);
+                ExpectArrow();
                 var body = ParseExpr();
                 return new Fun(param, body);
             }
@@ -242,7 +259,7 @@ namespace AttoML.Core.Parsing
             {
                 // Desugar fun (pat) -> body into fun __arg -> match __arg with pat -> body
                 var pat = ParseParenOrTuplePattern();
-                Expect(TokenKind.Arrow);
+                ExpectArrow();
                 var body = ParseExpr();
                 var argName = "__arg";
                 var match = new Match(new Var(argName), new List<(Pattern, Expr)> { (pat, body) });
@@ -254,19 +271,45 @@ namespace AttoML.Core.Parsing
             }
         }
 
+        private Expr ParseFn()
+        {
+            Expect(TokenKind.Fn);
+            if (Kind == TokenKind.Identifier)
+            {
+                var param = Expect(TokenKind.Identifier).Text;
+                ExpectArrow();
+                var body = ParseExpr();
+                return new Fun(param, body);
+            }
+            else if (Kind == TokenKind.LParen)
+            {
+                // Desugar fn (pat) => body into fn __arg => match __arg with pat -> body
+                var pat = ParseParenOrTuplePattern();
+                ExpectArrow();
+                var body = ParseExpr();
+                var argName = "__arg";
+                var match = new Match(new Var(argName), new List<(Pattern, Expr)> { (pat, body) });
+                return new Fun(argName, match);
+            }
+            else
+            {
+                throw new Exception("Expected parameter after 'fn'");
+            }
+        }
+
         private Expr ParseApp()
         {
             var expr = ParseAtom();
             while (true)
             {
-                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || (_insideMatchDepth == 1 && Kind == TokenKind.Bar))
+                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || Kind == TokenKind.Of || (_insideMatchDepth == 1 && Kind == TokenKind.Bar))
                 {
                     break;
                 }
                 if (Kind == TokenKind.Comma) break; // tuple handled in atom
                 // Application is juxtaposition: f x
-                // But avoid starting a new form like let/fun/if
-                if (Kind == TokenKind.Let || Kind == TokenKind.Fun || Kind == TokenKind.If || Kind == TokenKind.Structure || Kind == TokenKind.Signature || Kind == TokenKind.Open || Kind == TokenKind.Type)
+                // But avoid starting a new form like let/fun/if/fn/case/val
+                if (Kind == TokenKind.Let || Kind == TokenKind.Fun || Kind == TokenKind.Fn || Kind == TokenKind.If || Kind == TokenKind.Case || Kind == TokenKind.Match || Kind == TokenKind.Structure || Kind == TokenKind.Signature || Kind == TokenKind.Open || Kind == TokenKind.Type || Kind == TokenKind.Val)
                 {
                     break;
                 }
@@ -527,7 +570,36 @@ namespace AttoML.Core.Parsing
             while (true)
             {
                 var pat = ParsePattern();
-                Expect(TokenKind.Arrow);
+                ExpectArrow();
+                _insideMatchDepth++;
+                var expr = ParseExpr();
+                _insideMatchDepth--;
+                cases.Add((pat, expr));
+                if (Kind == TokenKind.Bar)
+                {
+                    Next();
+                    continue;
+                }
+                break;
+            }
+            return new Match(scrutinee, cases);
+        }
+
+        private Expr ParseCase()
+        {
+            Expect(TokenKind.Case);
+            var scrutinee = ParseExpr();
+            Expect(TokenKind.Of);
+            var cases = new List<(Pattern, Expr)>();
+            // Allow optional leading '|'
+            if (Kind == TokenKind.Bar)
+            {
+                Next();
+            }
+            while (true)
+            {
+                var pat = ParsePattern();
+                ExpectArrow();
                 _insideMatchDepth++;
                 var expr = ParseExpr();
                 _insideMatchDepth--;
@@ -557,7 +629,7 @@ namespace AttoML.Core.Parsing
             while (true)
             {
                 var pat = ParsePattern();
-                Expect(TokenKind.Arrow);
+                ExpectArrow();
                 _insideMatchDepth++;
                 var expr = ParseExpr();
                 _insideMatchDepth--;
@@ -574,6 +646,21 @@ namespace AttoML.Core.Parsing
 
         private Pattern ParsePattern()
         {
+            var pat = ParseAtomicPattern();
+
+            // Check for cons pattern: pat :: rest
+            if (Kind == TokenKind.ColonColon)
+            {
+                Next();
+                var tail = ParsePattern();
+                return new PListCons(pat, tail);
+            }
+
+            return pat;
+        }
+
+        private Pattern ParseAtomicPattern()
+        {
             switch (Kind)
             {
                 case TokenKind.IntLiteral:
@@ -588,6 +675,10 @@ namespace AttoML.Core.Parsing
                     Next(); return PUnit.Instance;
                 case TokenKind.LParen:
                     return ParseParenOrTuplePattern();
+                case TokenKind.LBracket:
+                    return ParseListPattern();
+                case TokenKind.LBrace:
+                    return ParseRecordPattern();
                 case TokenKind.Identifier:
                     // Wildcard pattern
                     var idTok = Expect(TokenKind.Identifier);
@@ -623,7 +714,7 @@ namespace AttoML.Core.Parsing
 
         private bool IsPatternStart(TokenKind k)
         {
-            return k == TokenKind.Identifier || k == TokenKind.IntLiteral || k == TokenKind.FloatLiteral || k == TokenKind.StringLiteral || k == TokenKind.BoolLiteral || k == TokenKind.Unit || k == TokenKind.LParen;
+            return k == TokenKind.Identifier || k == TokenKind.IntLiteral || k == TokenKind.FloatLiteral || k == TokenKind.StringLiteral || k == TokenKind.BoolLiteral || k == TokenKind.Unit || k == TokenKind.LParen || k == TokenKind.LBracket || k == TokenKind.LBrace;
         }
 
         private Pattern ParseParenOrTuplePattern()
@@ -633,8 +724,49 @@ namespace AttoML.Core.Parsing
             items.Add(ParsePattern());
             while (Match(TokenKind.Comma)) items.Add(ParsePattern());
             Expect(TokenKind.RParen);
-            if (items.Count == 1) return items[0];
+            if (items.Count == 1)
+            {
+                return items[0];
+            }
             return new PTuple(items);
+        }
+
+        private Pattern ParseListPattern()
+        {
+            Expect(TokenKind.LBracket);
+            var items = new List<Pattern>();
+            if (Kind != TokenKind.RBracket)
+            {
+                items.Add(ParsePattern());
+                while (Match(TokenKind.Comma))
+                {
+                    items.Add(ParsePattern());
+                }
+            }
+            Expect(TokenKind.RBracket);
+            return new PList(items);
+        }
+
+        private Pattern ParseRecordPattern()
+        {
+            Expect(TokenKind.LBrace);
+            var fields = new List<(string, Pattern)>();
+            if (Kind != TokenKind.RBrace)
+            {
+                while (true)
+                {
+                    var fieldName = Expect(TokenKind.Identifier).Text;
+                    Expect(TokenKind.Equals);
+                    var pat = ParsePattern();
+                    fields.Add((fieldName, pat));
+                    if (!Match(TokenKind.Comma))
+                    {
+                        break;
+                    }
+                }
+            }
+            Expect(TokenKind.RBrace);
+            return new PRecord(fields);
         }
 
         private Expr ParseParenOrTuple()

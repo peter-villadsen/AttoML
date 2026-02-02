@@ -42,6 +42,9 @@ namespace AttoML.Core.Parsing
     public sealed class PBool : Pattern { public bool Value; public PBool(bool v){Value=v;} }
     public sealed class PUnit : Pattern { public static readonly PUnit Instance = new PUnit(); private PUnit(){} }
     public sealed class PTuple : Pattern { public List<Pattern> Items; public PTuple(List<Pattern> items){Items=items;} }
+    public sealed class PList : Pattern { public List<Pattern> Items; public PList(List<Pattern> items){Items=items;} }
+    public sealed class PListCons : Pattern { public Pattern Head; public Pattern Tail; public PListCons(Pattern h, Pattern t){Head=h; Tail=t;} }
+    public sealed class PRecord : Pattern { public List<(string Name, Pattern Pat)> Fields; public PRecord(List<(string, Pattern)> fields){Fields=fields;} }
     public sealed class PCtor : Pattern { public string? Module; public string Name; public Pattern? Payload; public PCtor(string? m, string n, Pattern? payload){Module=m; Name=n; Payload=payload;} }
 
     public sealed class Match : Expr { public Expr Scrutinee; public List<(Pattern Pat, Expr Expr)> Cases; public Match(Expr s, List<(Pattern, Expr)> cases){Scrutinee=s; Cases=cases;} }

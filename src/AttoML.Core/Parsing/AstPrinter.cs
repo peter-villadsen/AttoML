@@ -144,13 +144,46 @@ namespace AttoML.Core.Parsing
                     break;
                 case PCtor pc:
                     if (pc.Module != null)
+                    {
                         sb.Append(pc.Module).Append('.');
+                    }
                     sb.Append(pc.Name);
                     if (pc.Payload != null)
                     {
                         sb.Append(' ');
                         PrintPattern(sb, pc.Payload);
                     }
+                    break;
+                case PList pl:
+                    sb.Append('[');
+                    for (int i = 0; i < pl.Items.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            sb.Append(", ");
+                        }
+                        PrintPattern(sb, pl.Items[i]);
+                    }
+                    sb.Append(']');
+                    break;
+                case PListCons plc:
+                    PrintPattern(sb, plc.Head);
+                    sb.Append("::");
+                    PrintPattern(sb, plc.Tail);
+                    break;
+                case PRecord pr:
+                    sb.Append('{');
+                    for (int i = 0; i < pr.Fields.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            sb.Append(", ");
+                        }
+                        sb.Append(pr.Fields[i].Name);
+                        sb.Append('=');
+                        PrintPattern(sb, pr.Fields[i].Pat);
+                    }
+                    sb.Append('}');
                     break;
             }
         }

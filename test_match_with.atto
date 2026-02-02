@@ -1,0 +1,6 @@
+(* Test match/with *)
+datatype Option = Some of int | None
+
+match Some 99 with
+    Some x -> x
+  | None -> 0

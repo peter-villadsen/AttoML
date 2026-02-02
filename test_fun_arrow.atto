@@ -1,0 +1,2 @@
+(* Test fun with -> *)
+(fun x -> x * 2) 5

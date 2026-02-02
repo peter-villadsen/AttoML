@@ -1,0 +1,13 @@
+(* Test backward compatibility *)
+
+(* fun with -> still works *)
+(fun x -> x * 2) 5
+
+(* match/with still works *)
+datatype Option = Some of int | None
+match Some 99 with
+    Some x -> x
+  | None -> 0
+
+(* andthen still works *)
+true andthen false

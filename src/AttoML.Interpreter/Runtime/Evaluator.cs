@@ -299,6 +299,67 @@ namespace AttoML.Interpreter
                         }
                     }
                     extendedEnv = env; return false;
+                case PList pl:
+                    if (v is ListVal lv && lv.Items.Count == pl.Items.Count)
+                    {
+                        var currEnv = e;
+                        for (int i = 0; i < pl.Items.Count; i++)
+                        {
+                            if (!TryMatch(lv.Items[i], pl.Items[i], currEnv, out var nextEnv))
+                            {
+                                extendedEnv = env;
+                                return false;
+                            }
+                            currEnv = nextEnv;
+                        }
+                        extendedEnv = currEnv;
+                        return true;
+                    }
+                    extendedEnv = env;
+                    return false;
+                case PListCons plc:
+                    if (v is ListVal lv2 && lv2.Items.Count > 0)
+                    {
+                        var head = lv2.Items[0];
+                        var tail = new ListVal(lv2.Items.Skip(1).ToList());
+                        if (!TryMatch(head, plc.Head, e, out var headEnv))
+                        {
+                            extendedEnv = env;
+                            return false;
+                        }
+                        if (!TryMatch(tail, plc.Tail, headEnv, out var tailEnv))
+                        {
+                            extendedEnv = env;
+                            return false;
+                        }
+                        extendedEnv = tailEnv;
+                        return true;
+                    }
+                    extendedEnv = env;
+                    return false;
+                case PRecord pr:
+                    if (v is RecordVal rv)
+                    {
+                        var currEnv = e;
+                        foreach (var (fieldName, fieldPat) in pr.Fields)
+                        {
+                            if (!rv.Fields.TryGetValue(fieldName, out var fieldVal))
+                            {
+                                extendedEnv = env;
+                                return false;
+                            }
+                            if (!TryMatch(fieldVal, fieldPat, currEnv, out var nextEnv))
+                            {
+                                extendedEnv = env;
+                                return false;
+                            }
+                            currEnv = nextEnv;
+                        }
+                        extendedEnv = currEnv;
+                        return true;
+                    }
+                    extendedEnv = env;
+                    return false;
                 default:
                     extendedEnv = env; return false;
             }
