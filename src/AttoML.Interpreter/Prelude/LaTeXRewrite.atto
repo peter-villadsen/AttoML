@@ -24,7 +24,7 @@ structure LaTeXRewrite = {
   fun tvar s = Template.TVar s,
 
   (* Algebraic rewrite rules *)
-  fun algebraicRules () = [
+  fun algebraicRules dummy = [
     (* Commutativity *)
     mkRule ("add_comm",
       Pattern.PAdd (pvar "?a", pvar "?b"),
@@ -123,9 +123,9 @@ structure LaTeXRewrite = {
 
   (* Optimize expression for LaTeX *)
   fun optimizeForLatex (expr, maxIters) =
-    let eg0 = EGraph.empty () in
+    let eg0 = EGraph.empty 0 in
     let (rootId, eg1) = EGraph.add (eg0, expr) in
-    let rules = algebraicRules () in
+    let rules = algebraicRules 0 in
     let eg2 = EGraph.saturate (eg1, rules, maxIters) in
     EGraph.extract (eg2, latexCost, rootId)
 }

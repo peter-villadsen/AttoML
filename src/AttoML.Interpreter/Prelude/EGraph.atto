@@ -1,5 +1,11 @@
 (* EGraph Module - E-graph equality saturation for symbolic expressions *)
 
+(* We use lists to encode option types:
+   [] = None
+   [x] = Some x
+   This avoids needing a polymorphic option type.
+*)
+
 (* E-node: Expression node with e-class ID children *)
 type ENode =
   EConst of float
@@ -58,8 +64,8 @@ structure EGraph = {
   (* Association list helpers *)
   fun assocFind (key, alist) =
     case alist of
-      [] -> None
-    | (k, v) :: rest -> if k = key then Some v else assocFind (key, rest),
+      [] -> []
+    | (k, v) :: rest -> if k = key then [v] else assocFind (key, rest),
 
   fun assocAdd (key, value, alist) = [(key, value)] @ alist,
 
@@ -98,13 +104,13 @@ structure EGraph = {
   fun mkEGraph (c, uf, hc, nid, wl) = ((c, uf, hc), (nid, wl)),
 
   (* Create empty e-graph *)
-  fun empty () = (([], [], []), (0, [])),
+  fun empty dummy = (([], [], []), (0, [])),
 
   (* Find canonical e-class with path compression *)
   fun find (eg, id) =
     case assocFind (id, unionFind eg) of
-      None -> (id, eg)  (* id is its own parent *)
-    | Some parent ->
+      [] -> (id, eg)  (* id is its own parent *)
+    | parent :: [] ->
         if parent = id then (id, eg)  (* Already canonical *)
         else
           let (canonical, eg2) = find (eg, parent) in
@@ -155,8 +161,8 @@ structure EGraph = {
   fun addNode (eg, node) =
     let (canonNode2, eg1) = canonNode (eg, node) in
     case assocFind (canonNode2, hashCons eg1) of
-      Some id -> (id, eg1)  (* Already exists *)
-    | None ->
+      id :: [] -> (id, eg1)  (* Already exists *)
+    | [] ->
         (* Create new e-class *)
         let id = nextId eg1 in
         let newClasses = assocAdd (id, [canonNode2], classes eg1) in
@@ -207,8 +213,8 @@ structure EGraph = {
     else
       (* Merge c2 into c1 *)
       let newUF = assocAdd (c2, c1, unionFind eg2) in
-      let nodes1 = case assocFind (c1, classes eg2) of Some ns -> ns | None -> [] in
-      let nodes2 = case assocFind (c2, classes eg2) of Some ns -> ns | None -> [] in
+      let nodes1 = case assocFind (c1, classes eg2) of ns :: [] -> ns | [] -> [] in
+      let nodes2 = case assocFind (c2, classes eg2) of ns :: [] -> ns | [] -> [] in
       let mergedNodes = setUnion (nodes1, nodes2) in
       let newClasses = assocUpdate (c1, mergedNodes, assocRemove (c2, classes eg2)) in
       let newWorklist = setAdd (c1, worklist eg2) in
@@ -221,7 +227,7 @@ structure EGraph = {
     | id :: rest ->
         let eg1 = mkEGraph (classes eg, unionFind eg, hashCons eg, nextId eg, rest) in
         (* Process e-class: re-canonicalize all nodes and merge duplicates *)
-        let nodes = case assocFind (id, classes eg) of Some ns -> ns | None -> [] in
+        let nodes = case assocFind (id, classes eg) of ns :: [] -> ns | [] -> [] in
         let eg2 = rebuildClass (eg1, id, nodes) in
         rebuild eg2,
 
@@ -231,12 +237,12 @@ structure EGraph = {
     | node :: rest ->
         let (canonNode2, eg1) = canonNode (eg, node) in
         let eg2 = case assocFind (canonNode2, hashCons eg1) of
-          Some existingId ->
+          existingId :: [] ->
             (* Found congruent node in different class - merge *)
             let (c1, eg3) = find (eg1, id) in
             let (c2, eg4) = find (eg3, existingId) in
             union (eg4, c1, c2)
-        | None ->
+        | [] ->
             (* Update hash-cons to point to canonical class *)
             let (cid, eg3) = find (eg1, id) in
             let newHashCons = assocUpdate (canonNode2, cid, hashCons eg3) in
@@ -250,13 +256,13 @@ structure EGraph = {
       Pattern.PConst r ->
         (* Check if e-class contains constant *)
         let (cid, eg1) = find (eg, id) in
-        let nodes = case assocFind (cid, classes eg1) of Some ns -> ns | None -> [] in
-        if containsConst (nodes, r) then Some subst else None
+        let nodes = case assocFind (cid, classes eg1) of ns :: [] -> ns | [] -> [] in
+        if containsConst (nodes, r) then [subst] else []
     | Pattern.PVar v ->
         (* Bind pattern variable *)
         case assocFind (v, subst) of
-          Some boundId -> if boundId = id then Some subst else None
-        | None -> Some (assocAdd (v, id, subst))
+          boundId :: [] -> if boundId = id then [subst] else []
+        | [] -> [assocAdd (v, id, subst)]
     | Pattern.PAdd (a, b) -> matchBinary (eg, id, a, b, subst, isAddNode)
     | Pattern.PSub (a, b) -> matchBinary (eg, id, a, b, subst, isSubNode)
     | Pattern.PMul (a, b) -> matchBinary (eg, id, a, b, subst, isMulNode)
@@ -285,12 +291,12 @@ structure EGraph = {
 
   fun matchBinary (eg, id, patA, patB, subst, predicate) =
     let (cid, eg1) = find (eg, id) in
-    let nodes = case assocFind (cid, classes eg1) of Some ns -> ns | None -> [] in
+    let nodes = case assocFind (cid, classes eg1) of ns :: [] -> ns | [] -> [] in
     matchBinaryInNodes (eg1, nodes, patA, patB, subst, predicate),
 
   fun matchBinaryInNodes (eg, nodes, patA, patB, subst, predicate) =
     case nodes of
-      [] -> None
+      [] -> []
     | node :: rest ->
         if predicate node then
           let (aId, bId) = case node of
@@ -302,21 +308,21 @@ structure EGraph = {
           | _ -> (0, 0)  (* Should not happen *)
           in
           case matchPattern (eg, aId, patA, subst) of
-            Some subst2 ->
+            subst2 :: [] ->
               case matchPattern (eg, bId, patB, subst2) of
-                Some subst3 -> Some subst3
-              | None -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
-          | None -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
+                subst3 :: [] -> [subst3]
+              | [] -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
+          | [] -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
         else matchBinaryInNodes (eg, rest, patA, patB, subst, predicate),
 
   fun matchUnary (eg, id, patA, subst, predicate) =
     let (cid, eg1) = find (eg, id) in
-    let nodes = case assocFind (cid, classes eg1) of Some ns -> ns | None -> [] in
+    let nodes = case assocFind (cid, classes eg1) of ns :: [] -> ns | [] -> [] in
     matchUnaryInNodes (eg1, nodes, patA, subst, predicate),
 
   fun matchUnaryInNodes (eg, nodes, patA, subst, predicate) =
     case nodes of
-      [] -> None
+      [] -> []
     | node :: rest ->
         if predicate node then
           let aId = case node of
@@ -327,8 +333,8 @@ structure EGraph = {
           | _ -> 0  (* Should not happen *)
           in
           case matchPattern (eg, aId, patA, subst) of
-            Some subst2 -> Some subst2
-          | None -> matchUnaryInNodes (eg, rest, patA, subst, predicate)
+            subst2 :: [] -> [subst2]
+          | [] -> matchUnaryInNodes (eg, rest, patA, subst, predicate)
         else matchUnaryInNodes (eg, rest, patA, subst, predicate),
 
   (* Instantiate template with substitution *)
@@ -337,8 +343,8 @@ structure EGraph = {
       Template.TConst r -> addNode (eg, ENode.EConst r)
     | Template.TVar v ->
         case assocFind (v, subst) of
-          Some id -> (id, eg)
-        | None -> raise (Fail "unbound pattern variable")
+          id :: [] -> (id, eg)
+        | [] -> raise (Fail "unbound pattern variable")
     | Template.TAdd (a, b) ->
         let (aId, eg1) = instantiate (eg, a, subst) in
         let (bId, eg2) = instantiate (eg1, b, subst) in
@@ -390,10 +396,10 @@ structure EGraph = {
 
   fun applyToClass (eg, rule, id) =
     case matchPattern (eg, id, rulePattern rule, []) of
-      Some subst ->
+      subst :: [] ->
         let (rhsId, eg1) = instantiate (eg, ruleTemplate rule, subst) in
         union (eg1, id, rhsId)
-    | None -> eg,
+    | [] -> eg,
 
   (* Saturate e-graph with rewrite rules *)
   fun saturate (eg, rules, maxIters) =
@@ -418,9 +424,9 @@ structure EGraph = {
 
   fun extractMemo (eg, costFn, id, memo) =
     case assocFind (id, memo) of
-      Some (cost, expr) -> (cost, expr, memo)
-    | None ->
-        let nodes = case assocFind (id, classes eg) of Some ns -> ns | None -> [] in
+      [(cost, expr)] -> (cost, expr, memo)
+    | [] ->
+        let nodes = case assocFind (id, classes eg) of ns :: [] -> ns | [] -> [] in
         let (bestCost, bestExpr, memo2) = extractBest (eg, costFn, nodes, 1000000.0, Expr.Const 0.0, memo) in
         let memo3 = assocAdd (id, (bestCost, bestExpr), memo2) in
         (bestCost, bestExpr, memo3),

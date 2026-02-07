@@ -22,7 +22,7 @@ namespace AttoML.Tests
         [Fact]
         public void EGraph_Empty_Works()
         {
-            var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + "\nlet eg = EGraph.empty () in eg.nextId");
+            var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + "\nlet eg = EGraph.empty 0 in eg.nextId");
             ev.ApplyOpen(decls);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var intVal = Assert.IsType<IntVal>(v);
@@ -33,7 +33,7 @@ namespace AttoML.Tests
         public void EGraph_AddConst_Works()
         {
             var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + @"
-                let eg0 = EGraph.empty () in
+                let eg0 = EGraph.empty 0 in
                 let (id, eg1) = EGraph.add (eg0, Expr.Const 42.0) in
                 id");
             ev.ApplyOpen(decls);
@@ -46,7 +46,7 @@ namespace AttoML.Tests
         public void EGraph_AddMultiple_Works()
         {
             var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + @"
-                let eg0 = EGraph.empty () in
+                let eg0 = EGraph.empty 0 in
                 let (id1, eg1) = EGraph.add (eg0, Expr.Const 1.0) in
                 let (id2, eg2) = EGraph.add (eg1, Expr.Const 2.0) in
                 eg2.nextId");
@@ -60,7 +60,7 @@ namespace AttoML.Tests
         public void EGraph_HashConsing_Works()
         {
             var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + @"
-                let eg0 = EGraph.empty () in
+                let eg0 = EGraph.empty 0 in
                 let (id1, eg1) = EGraph.add (eg0, Expr.Const 42.0) in
                 let (id2, eg2) = EGraph.add (eg1, Expr.Const 42.0) in
                 id1 = id2");
@@ -74,7 +74,7 @@ namespace AttoML.Tests
         public void EGraph_Union_Works()
         {
             var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + @"
-                let eg0 = EGraph.empty () in
+                let eg0 = EGraph.empty 0 in
                 let (id1, eg1) = EGraph.add (eg0, Expr.Const 1.0) in
                 let (id2, eg2) = EGraph.add (eg1, Expr.Const 2.0) in
                 let eg3 = EGraph.union (eg2, id1, id2) in
@@ -92,7 +92,7 @@ namespace AttoML.Tests
         {
             var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + @"
                 let costFn = fun node -> 1.0 in
-                let eg0 = EGraph.empty () in
+                let eg0 = EGraph.empty 0 in
                 let (id, eg1) = EGraph.add (eg0, Expr.Const 42.0) in
                 let result = EGraph.extract (eg1, costFn, id) in
                 case result of Expr.Const r -> r | _ -> 0.0");
@@ -106,7 +106,7 @@ namespace AttoML.Tests
         public void EGraph_AddExpression_Works()
         {
             var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + @"
-                let eg0 = EGraph.empty () in
+                let eg0 = EGraph.empty 0 in
                 let e = Expr.Add (Expr.Const 1.0, Expr.Const 2.0) in
                 let (id, eg1) = EGraph.add (eg0, e) in
                 eg1.nextId");
