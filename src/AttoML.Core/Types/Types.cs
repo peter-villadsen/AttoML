@@ -82,21 +82,48 @@ namespace AttoML.Core.Types
     {
         private readonly Dictionary<int, Type> _map = new();
         public void Add(int id, Type t) => _map[id] = t;
+
         public Type Apply(Type t)
         {
+            return ApplyWithDepth(t, new HashSet<int>(), 0);
+        }
+
+        private Type ApplyWithDepth(Type t, HashSet<int> visiting, int depth)
+        {
+            // Prevent infinite recursion by limiting depth
+            if (depth > 100)
+            {
+                return t; // Return the type as-is if we're too deep
+            }
+
+            if (t is TVar v)
+            {
+                if (!_map.TryGetValue(v.Id, out var tv))
+                    return v;
+                // Detect cycles: if we're already visiting this var, return it as-is
+                if (!visiting.Add(v.Id))
+                    return v;
+                var result = ApplyWithDepth(tv, visiting, depth + 1);
+                visiting.Remove(v.Id);
+                return result;
+            }
+
             return t switch
             {
-                TVar v => _map.TryGetValue(v.Id, out var tv) ? Apply(tv) : v,
-                TFun f => new TFun(Apply(f.From), Apply(f.To)),
-                TTuple tt => new TTuple(tt.Items.Select(Apply).ToList()),
-                TList tl => new TList(Apply(tl.Elem)),
-                TRecord tr => new TRecord(tr.Fields.ToDictionary(kv => kv.Key, kv => Apply(kv.Value))),
-                TAdt ta => new TAdt(ta.Name, ta.TypeArgs.Select(Apply).ToList()),
+                TFun f => new TFun(
+                    ApplyWithDepth(f.From, visiting, depth + 1),
+                    ApplyWithDepth(f.To, visiting, depth + 1)),
+                TTuple tt => new TTuple(tt.Items.Select(i => ApplyWithDepth(i, visiting, depth + 1)).ToList()),
+                TList tl => new TList(ApplyWithDepth(tl.Elem, visiting, depth + 1)),
+                TRecord tr => new TRecord(tr.Fields.ToDictionary(kv => kv.Key, kv => ApplyWithDepth(kv.Value, visiting, depth + 1))),
+                TAdt ta => new TAdt(ta.Name, ta.TypeArgs.Select(a => ApplyWithDepth(a, visiting, depth + 1)).ToList()),
                 _ => t
             };
         }
+
         public void Compose(Subst other)
         {
+            // Apply current substitution to each value in other, then add to map
             foreach (var kv in other._map)
             {
                 _map[kv.Key] = Apply(kv.Value);
