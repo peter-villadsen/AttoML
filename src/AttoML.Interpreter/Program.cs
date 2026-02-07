@@ -422,6 +422,9 @@ namespace AttoML.Interpreter
 			LoadOne("Result.atto");
 			LoadOne("Complex.atto");
 			LoadOne("SymCalc.atto");
+			// LoadOne("EGraph.atto");
+			// LoadOne("LaTeXRewrite.atto");
+			// LoadOne("LaTeX.atto");
 		}
 	}
 }

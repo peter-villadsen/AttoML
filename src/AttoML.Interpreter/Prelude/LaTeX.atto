@@ -1,0 +1,103 @@
+(* LaTeX Module - Convert symbolic expressions to LaTeX format *)
+
+structure LaTeX = {
+  (* Precedence levels:
+     0 = top level (no parens)
+     1 = addition/subtraction
+     2 = right side of subtraction
+     3 = multiplication/division
+     4 = exponentiation
+  *)
+
+  (* Helper: check if expression is a simple atom *)
+  fun isAtom e =
+    case e of
+      Expr.Const _ -> true
+    | Expr.Var _ -> true
+    | _ -> false,
+
+  (* Helper: check if expression is numeric constant *)
+  fun isNumeric e =
+    case e of
+      Expr.Const _ -> true
+    | _ -> false,
+
+  (* Helper: check if expression needs multiplication symbol *)
+  fun needsMulSymbol (a, b) =
+    case (a, b) of
+      (Expr.Const _, Expr.Const _) -> true
+    | (Expr.Const _, Expr.Var _) -> false      (* 2x *)
+    | (Expr.Const _, _) -> true                (* 2(x+1) *)
+    | (_, Expr.Const _) -> true                (* x·2 *)
+    | (Expr.Var _, Expr.Var _) -> true         (* x·y *)
+    | _ -> true,
+
+  (* Format float for LaTeX *)
+  fun formatFloat r =
+    let s = String.ofFloat r in
+    if String.contains "." s then s
+    else String.concat s ".0",
+
+  (* Wrap in parentheses *)
+  fun paren s = String.concat (String.concat "(" s) ")",
+
+  (* Convert to LaTeX with precedence *)
+  fun toLatexP (e, prec) =
+    case e of
+      Expr.Const r ->
+        if r < 0.0 then
+          let absStr = formatFloat (0.0 - r) in
+          if prec > 1 then paren (String.concat "-" absStr)
+          else String.concat "-" absStr
+        else formatFloat r
+    | Expr.Var v -> v
+    | Expr.Add (a, b) ->
+        let s = String.concat (String.concat (toLatexP (a, 1)) " + ") (toLatexP (b, 1)) in
+        if prec > 1 then paren s else s
+    | Expr.Sub (a, b) ->
+        let s = String.concat (String.concat (toLatexP (a, 1)) " - ") (toLatexP (b, 2)) in
+        if prec > 1 then paren s else s
+    | Expr.Mul (a, b) ->
+        let aStr = toLatexP (a, 3) in
+        let bStr = toLatexP (b, 3) in
+        let sep = if needsMulSymbol (a, b) then " \\cdot " else "" in
+        let s = String.concat (String.concat aStr sep) bStr in
+        if prec > 3 then paren s else s
+    | Expr.Div (a, b) ->
+        let aStr = toLatexP (a, 0) in
+        let bStr = toLatexP (b, 0) in
+        String.concat (String.concat (String.concat "\\frac{" aStr) "}{") (String.concat bStr "}")
+    | Expr.Pow (a, b) ->
+        let aStr = if isAtom a then toLatexP (a, 4) else paren (toLatexP (a, 0)) in
+        let bStr = toLatexP (b, 0) in
+        let s = String.concat (String.concat aStr "^{") (String.concat bStr "}") in
+        if prec > 4 then paren s else s
+    | Expr.Sin a ->
+        let aStr = toLatexP (a, 0) in
+        String.concat (String.concat "\\sin(" aStr) ")"
+    | Expr.Cos a ->
+        let aStr = toLatexP (a, 0) in
+        String.concat (String.concat "\\cos(" aStr) ")"
+    | Expr.Log a ->
+        let aStr = toLatexP (a, 0) in
+        String.concat (String.concat "\\log(" aStr) ")",
+
+  (* Convert to LaTeX string *)
+  fun toLatex e = toLatexP (e, 0),
+
+  (* Format expression with optimization *)
+  fun formatOptimized (exprStr, maxIters) =
+    let expr = SymCalc.parse exprStr in
+    let simplified = SymCalc.simplify expr in
+    let optimized = LaTeXRewrite.optimizeForLatex (simplified, maxIters) in
+    toLatex optimized,
+
+  (* Show before/after comparison *)
+  fun showOptimization exprStr =
+    let expr = SymCalc.parse exprStr in
+    let simplified = SymCalc.simplify expr in
+    let optimized = LaTeXRewrite.optimizeForLatex (simplified, 10) in
+    let original = toLatex simplified in
+    let result = toLatex optimized in
+    String.concat (String.concat (String.concat (String.concat "Original: " original) "\nOptimized: ") result) "\n"
+}

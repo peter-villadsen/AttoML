@@ -1,0 +1,62 @@
+(* E-Graph LaTeX Demo - Demonstrating equality saturation for LaTeX optimization *)
+
+(* Example 1: Factoring *)
+let ex1 = LaTeX.showOptimization "a*b + a*c";;
+
+(* Example 2: More complex factoring *)
+let ex2 = LaTeX.showOptimization "a*(b+c) + a*d";;
+
+(* Example 3: Fraction combination *)
+let ex3 = LaTeX.showOptimization "x/y + z/y";;
+
+(* Example 4: Power laws *)
+let ex4 = LaTeX.showOptimization "x^2 * x^3";;
+
+(* Example 5: Nested expressions *)
+let ex5 = LaTeX.showOptimization "(a+b)*(a+b)";;
+
+(* Example 6: Division simplification *)
+let ex6 = LaTeX.showOptimization "2*x + 3*x";;
+
+(* Example 7: With symbolic differentiation *)
+let derivative = SymCalc.diff ("x", SymCalc.parse "x^3 + x^2");;
+let optimized = LaTeXRewrite.optimizeForLatex (derivative, 10);;
+let ex7 = LaTeX.toLatex optimized;;
+
+(* Example 8: Format a complex expression *)
+let ex8 = LaTeX.formatOptimized ("sin(x)^2 + cos(x)^2", 10);;
+
+(* Display results *)
+print "=== E-Graph LaTeX Optimization Demo ===\n\n";;
+print "Example 1: Factoring\n";;
+print ex1;;
+print "\n";;
+
+print "Example 2: More complex factoring\n";;
+print ex2;;
+print "\n";;
+
+print "Example 3: Fraction combination\n";;
+print ex3;;
+print "\n";;
+
+print "Example 4: Power laws\n";;
+print ex4;;
+print "\n";;
+
+print "Example 5: Nested expressions\n";;
+print ex5;;
+print "\n";;
+
+print "Example 6: Division simplification\n";;
+print ex6;;
+print "\n";;
+
+print "Example 7: Derivative optimization\n";;
+print "Derivative of x^3 + x^2:\n";;
+print ex7;;
+print "\n\n";;
+
+print "Example 8: Trig identity\n";;
+print ex8;;
+print "\n";;

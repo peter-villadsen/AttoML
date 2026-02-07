@@ -1,0 +1,485 @@
+(* EGraph Module - E-graph equality saturation for symbolic expressions *)
+
+(* E-node: Expression node with e-class ID children *)
+type ENode =
+  EConst of float
+| EVar of string
+| EAdd of int * int
+| ESub of int * int
+| EMul of int * int
+| EDiv of int * int
+| EPow of int * int
+| ESin of int
+| ECos of int
+| ELog of int
+| ENeg of int
+
+(* Pattern for rewrite rule left-hand sides *)
+type Pattern =
+  PConst of float
+| PVar of string  (* Pattern variable like ?a *)
+| PAdd of Pattern * Pattern
+| PSub of Pattern * Pattern
+| PMul of Pattern * Pattern
+| PDiv of Pattern * Pattern
+| PPow of Pattern * Pattern
+| PSin of Pattern
+| PCos of Pattern
+| PLog of Pattern
+| PNeg of Pattern
+
+(* Template for rewrite rule right-hand sides *)
+type Template =
+  TConst of float
+| TVar of string  (* Pattern variable like ?a *)
+| TAdd of Template * Template
+| TSub of Template * Template
+| TMul of Template * Template
+| TDiv of Template * Template
+| TPow of Template * Template
+| TSin of Template
+| TCos of Template
+| TLog of Template
+| TNeg of Template
+
+(* E-graph structure as a nested tuple:
+   ((classes, unionFind, hashCons), (nextId, worklist))
+   where:
+   - classes: (int * ENode list) list - map from e-class ID to set of ENodes
+   - unionFind: (int * int) list - map from ID to parent ID
+   - hashCons: (ENode * int) list - map from ENode to e-class ID
+   - nextId: int - next available e-class ID
+   - worklist: int list - pending merges for congruence
+*)
+
+(* Rewrite rule as a tuple: (name, pattern, template) *)
+
+structure EGraph = {
+  (* Association list helpers *)
+  fun assocFind (key, alist) =
+    case alist of
+      [] -> None
+    | (k, v) :: rest -> if k = key then Some v else assocFind (key, rest),
+
+  fun assocAdd (key, value, alist) = [(key, value)] @ alist,
+
+  fun assocUpdate (key, value, alist) =
+    case alist of
+      [] -> [(key, value)]
+    | (k, v) :: rest ->
+        if k = key then [(k, value)] @ rest
+        else [(k, v)] @ assocUpdate (key, value, rest),
+
+  fun assocRemove (key, alist) =
+    case alist of
+      [] -> []
+    | (k, v) :: rest -> if k = key then rest else [(k, v)] @ assocRemove (key, rest),
+
+  (* Set operations on lists *)
+  fun setMember (x, lst) =
+    case lst of
+      [] -> false
+    | h :: t -> if x = h then true else setMember (x, t),
+
+  fun setAdd (x, lst) = if setMember (x, lst) then lst else [x] @ lst,
+
+  fun setUnion (lst1, lst2) =
+    case lst1 of
+      [] -> lst2
+    | h :: t -> setUnion (t, setAdd (h, lst2)),
+
+  (* Tuple accessors for EGraph: ((classes, unionFind, hashCons), (nextId, worklist)) *)
+  fun classes eg = case eg of ((c, uf, hc), (nid, wl)) -> c,
+  fun unionFind eg = case eg of ((c, uf, hc), (nid, wl)) -> uf,
+  fun hashCons eg = case eg of ((c, uf, hc), (nid, wl)) -> hc,
+  fun nextId eg = case eg of ((c, uf, hc), (nid, wl)) -> nid,
+  fun worklist eg = case eg of ((c, uf, hc), (nid, wl)) -> wl,
+
+  fun mkEGraph (c, uf, hc, nid, wl) = ((c, uf, hc), (nid, wl)),
+
+  (* Create empty e-graph *)
+  fun empty () = (([], [], []), (0, [])),
+
+  (* Find canonical e-class with path compression *)
+  fun find (eg, id) =
+    case assocFind (id, unionFind eg) of
+      None -> (id, eg)  (* id is its own parent *)
+    | Some parent ->
+        if parent = id then (id, eg)  (* Already canonical *)
+        else
+          let (canonical, eg2) = find (eg, parent) in
+          (* Path compression: update id to point directly to canonical *)
+          let newUF = assocUpdate (id, canonical, unionFind eg2) in
+          let eg3 = mkEGraph (classes eg2, newUF, hashCons eg2, nextId eg2, worklist eg2) in
+          (canonical, eg3),
+
+  (* Canonicalize an ENode by finding canonical IDs of children *)
+  fun canonNode (eg, node) =
+    case node of
+      ENode.EConst r -> (ENode.EConst r, eg)
+    | ENode.EVar v -> (ENode.EVar v, eg)
+    | ENode.EAdd (a, b) ->
+        let (ca, eg1) = find (eg, a) in
+        let (cb, eg2) = find (eg1, b) in
+        (ENode.EAdd (ca, cb), eg2)
+    | ENode.ESub (a, b) ->
+        let (ca, eg1) = find (eg, a) in
+        let (cb, eg2) = find (eg1, b) in
+        (ENode.ESub (ca, cb), eg2)
+    | ENode.EMul (a, b) ->
+        let (ca, eg1) = find (eg, a) in
+        let (cb, eg2) = find (eg1, b) in
+        (ENode.EMul (ca, cb), eg2)
+    | ENode.EDiv (a, b) ->
+        let (ca, eg1) = find (eg, a) in
+        let (cb, eg2) = find (eg1, b) in
+        (ENode.EDiv (ca, cb), eg2)
+    | ENode.EPow (a, b) ->
+        let (ca, eg1) = find (eg, a) in
+        let (cb, eg2) = find (eg1, b) in
+        (ENode.EPow (ca, cb), eg2)
+    | ENode.ESin a ->
+        let (ca, eg1) = find (eg, a) in
+        (ENode.ESin ca, eg1)
+    | ENode.ECos a ->
+        let (ca, eg1) = find (eg, a) in
+        (ENode.ECos ca, eg1)
+    | ENode.ELog a ->
+        let (ca, eg1) = find (eg, a) in
+        (ENode.ELog ca, eg1)
+    | ENode.ENeg a ->
+        let (ca, eg1) = find (eg, a) in
+        (ENode.ENeg ca, eg1),
+
+  (* Add an ENode to e-graph with hash-consing *)
+  fun addNode (eg, node) =
+    let (canonNode2, eg1) = canonNode (eg, node) in
+    case assocFind (canonNode2, hashCons eg1) of
+      Some id -> (id, eg1)  (* Already exists *)
+    | None ->
+        (* Create new e-class *)
+        let id = nextId eg1 in
+        let newClasses = assocAdd (id, [canonNode2], classes eg1) in
+        let newHashCons = assocAdd (canonNode2, id, hashCons eg1) in
+        let eg2 = mkEGraph (newClasses, unionFind eg1, newHashCons, id + 1, worklist eg1) in
+        (id, eg2),
+
+  (* Convert SymCalc.Expr to e-graph *)
+  fun add (eg, expr) =
+    case expr of
+      Expr.Const r -> addNode (eg, ENode.EConst r)
+    | Expr.Var v -> addNode (eg, ENode.EVar v)
+    | Expr.Add (a, b) ->
+        let (aId, eg1) = add (eg, a) in
+        let (bId, eg2) = add (eg1, b) in
+        addNode (eg2, ENode.EAdd (aId, bId))
+    | Expr.Sub (a, b) ->
+        let (aId, eg1) = add (eg, a) in
+        let (bId, eg2) = add (eg1, b) in
+        addNode (eg2, ENode.ESub (aId, bId))
+    | Expr.Mul (a, b) ->
+        let (aId, eg1) = add (eg, a) in
+        let (bId, eg2) = add (eg1, b) in
+        addNode (eg2, ENode.EMul (aId, bId))
+    | Expr.Div (a, b) ->
+        let (aId, eg1) = add (eg, a) in
+        let (bId, eg2) = add (eg1, b) in
+        addNode (eg2, ENode.EDiv (aId, bId))
+    | Expr.Pow (a, b) ->
+        let (aId, eg1) = add (eg, a) in
+        let (bId, eg2) = add (eg1, b) in
+        addNode (eg2, ENode.EPow (aId, bId))
+    | Expr.Sin a ->
+        let (aId, eg1) = add (eg, a) in
+        addNode (eg1, ENode.ESin aId)
+    | Expr.Cos a ->
+        let (aId, eg1) = add (eg, a) in
+        addNode (eg1, ENode.ECos aId)
+    | Expr.Log a ->
+        let (aId, eg1) = add (eg, a) in
+        addNode (eg1, ENode.ELog aId),
+
+  (* Union two e-classes *)
+  fun union (eg, id1, id2) =
+    let (c1, eg1) = find (eg, id1) in
+    let (c2, eg2) = find (eg1, id2) in
+    if c1 = c2 then eg2  (* Already in same class *)
+    else
+      (* Merge c2 into c1 *)
+      let newUF = assocAdd (c2, c1, unionFind eg2) in
+      let nodes1 = case assocFind (c1, classes eg2) of Some ns -> ns | None -> [] in
+      let nodes2 = case assocFind (c2, classes eg2) of Some ns -> ns | None -> [] in
+      let mergedNodes = setUnion (nodes1, nodes2) in
+      let newClasses = assocUpdate (c1, mergedNodes, assocRemove (c2, classes eg2)) in
+      let newWorklist = setAdd (c1, worklist eg2) in
+      mkEGraph (newClasses, newUF, hashCons eg2, nextId eg2, newWorklist),
+
+  (* Rebuild for congruence closure *)
+  fun rebuild eg =
+    case worklist eg of
+      [] -> eg  (* Fixpoint reached *)
+    | id :: rest ->
+        let eg1 = mkEGraph (classes eg, unionFind eg, hashCons eg, nextId eg, rest) in
+        (* Process e-class: re-canonicalize all nodes and merge duplicates *)
+        let nodes = case assocFind (id, classes eg) of Some ns -> ns | None -> [] in
+        let eg2 = rebuildClass (eg1, id, nodes) in
+        rebuild eg2,
+
+  fun rebuildClass (eg, id, nodes) =
+    case nodes of
+      [] -> eg
+    | node :: rest ->
+        let (canonNode2, eg1) = canonNode (eg, node) in
+        let eg2 = case assocFind (canonNode2, hashCons eg1) of
+          Some existingId ->
+            (* Found congruent node in different class - merge *)
+            let (c1, eg3) = find (eg1, id) in
+            let (c2, eg4) = find (eg3, existingId) in
+            union (eg4, c1, c2)
+        | None ->
+            (* Update hash-cons to point to canonical class *)
+            let (cid, eg3) = find (eg1, id) in
+            let newHashCons = assocUpdate (canonNode2, cid, hashCons eg3) in
+            mkEGraph (classes eg3, unionFind eg3, newHashCons, nextId eg3, worklist eg3)
+        in
+        rebuildClass (eg2, id, rest),
+
+  (* Pattern matching *)
+  fun matchPattern (eg, id, pat, subst) =
+    case pat of
+      Pattern.PConst r ->
+        (* Check if e-class contains constant *)
+        let (cid, eg1) = find (eg, id) in
+        let nodes = case assocFind (cid, classes eg1) of Some ns -> ns | None -> [] in
+        if containsConst (nodes, r) then Some subst else None
+    | Pattern.PVar v ->
+        (* Bind pattern variable *)
+        case assocFind (v, subst) of
+          Some boundId -> if boundId = id then Some subst else None
+        | None -> Some (assocAdd (v, id, subst))
+    | Pattern.PAdd (a, b) -> matchBinary (eg, id, a, b, subst, isAddNode)
+    | Pattern.PSub (a, b) -> matchBinary (eg, id, a, b, subst, isSubNode)
+    | Pattern.PMul (a, b) -> matchBinary (eg, id, a, b, subst, isMulNode)
+    | Pattern.PDiv (a, b) -> matchBinary (eg, id, a, b, subst, isDivNode)
+    | Pattern.PPow (a, b) -> matchBinary (eg, id, a, b, subst, isPowNode)
+    | Pattern.PSin a -> matchUnary (eg, id, a, subst, isSinNode)
+    | Pattern.PCos a -> matchUnary (eg, id, a, subst, isCosNode)
+    | Pattern.PLog a -> matchUnary (eg, id, a, subst, isLogNode)
+    | Pattern.PNeg a -> matchUnary (eg, id, a, subst, isNegNode),
+
+  fun containsConst (nodes, r) =
+    case nodes of
+      [] -> false
+    | ENode.EConst r2 :: rest -> if r = r2 then true else containsConst (rest, r)
+    | _ :: rest -> containsConst (rest, r),
+
+  fun isAddNode node = case node of ENode.EAdd _ -> true | _ -> false,
+  fun isSubNode node = case node of ENode.ESub _ -> true | _ -> false,
+  fun isMulNode node = case node of ENode.EMul _ -> true | _ -> false,
+  fun isDivNode node = case node of ENode.EDiv _ -> true | _ -> false,
+  fun isPowNode node = case node of ENode.EPow _ -> true | _ -> false,
+  fun isSinNode node = case node of ENode.ESin _ -> true | _ -> false,
+  fun isCosNode node = case node of ENode.ECos _ -> true | _ -> false,
+  fun isLogNode node = case node of ENode.ELog _ -> true | _ -> false,
+  fun isNegNode node = case node of ENode.ENeg _ -> true | _ -> false,
+
+  fun matchBinary (eg, id, patA, patB, subst, predicate) =
+    let (cid, eg1) = find (eg, id) in
+    let nodes = case assocFind (cid, classes eg1) of Some ns -> ns | None -> [] in
+    matchBinaryInNodes (eg1, nodes, patA, patB, subst, predicate),
+
+  fun matchBinaryInNodes (eg, nodes, patA, patB, subst, predicate) =
+    case nodes of
+      [] -> None
+    | node :: rest ->
+        if predicate node then
+          let (aId, bId) = case node of
+            ENode.EAdd (a, b) -> (a, b)
+          | ENode.ESub (a, b) -> (a, b)
+          | ENode.EMul (a, b) -> (a, b)
+          | ENode.EDiv (a, b) -> (a, b)
+          | ENode.EPow (a, b) -> (a, b)
+          | _ -> (0, 0)  (* Should not happen *)
+          in
+          case matchPattern (eg, aId, patA, subst) of
+            Some subst2 ->
+              case matchPattern (eg, bId, patB, subst2) of
+                Some subst3 -> Some subst3
+              | None -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
+          | None -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
+        else matchBinaryInNodes (eg, rest, patA, patB, subst, predicate),
+
+  fun matchUnary (eg, id, patA, subst, predicate) =
+    let (cid, eg1) = find (eg, id) in
+    let nodes = case assocFind (cid, classes eg1) of Some ns -> ns | None -> [] in
+    matchUnaryInNodes (eg1, nodes, patA, subst, predicate),
+
+  fun matchUnaryInNodes (eg, nodes, patA, subst, predicate) =
+    case nodes of
+      [] -> None
+    | node :: rest ->
+        if predicate node then
+          let aId = case node of
+            ENode.ESin a -> a
+          | ENode.ECos a -> a
+          | ENode.ELog a -> a
+          | ENode.ENeg a -> a
+          | _ -> 0  (* Should not happen *)
+          in
+          case matchPattern (eg, aId, patA, subst) of
+            Some subst2 -> Some subst2
+          | None -> matchUnaryInNodes (eg, rest, patA, subst, predicate)
+        else matchUnaryInNodes (eg, rest, patA, subst, predicate),
+
+  (* Instantiate template with substitution *)
+  fun instantiate (eg, tmpl, subst) =
+    case tmpl of
+      Template.TConst r -> addNode (eg, ENode.EConst r)
+    | Template.TVar v ->
+        case assocFind (v, subst) of
+          Some id -> (id, eg)
+        | None -> raise (Fail "unbound pattern variable")
+    | Template.TAdd (a, b) ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        let (bId, eg2) = instantiate (eg1, b, subst) in
+        addNode (eg2, ENode.EAdd (aId, bId))
+    | Template.TSub (a, b) ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        let (bId, eg2) = instantiate (eg1, b, subst) in
+        addNode (eg2, ENode.ESub (aId, bId))
+    | Template.TMul (a, b) ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        let (bId, eg2) = instantiate (eg1, b, subst) in
+        addNode (eg2, ENode.EMul (aId, bId))
+    | Template.TDiv (a, b) ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        let (bId, eg2) = instantiate (eg1, b, subst) in
+        addNode (eg2, ENode.EDiv (aId, bId))
+    | Template.TPow (a, b) ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        let (bId, eg2) = instantiate (eg1, b, subst) in
+        addNode (eg2, ENode.EPow (aId, bId))
+    | Template.TSin a ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        addNode (eg1, ENode.ESin aId)
+    | Template.TCos a ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        addNode (eg1, ENode.ECos aId)
+    | Template.TLog a ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        addNode (eg1, ENode.ELog aId)
+    | Template.TNeg a ->
+        let (aId, eg1) = instantiate (eg, a, subst) in
+        addNode (eg1, ENode.ENeg aId),
+
+  (* Rewrite rule helpers *)
+  fun ruleName r = case r of (name, _, _) -> name,
+  fun rulePattern r = case r of (_, pat, _) -> pat,
+  fun ruleTemplate r = case r of (_, _, tmpl) -> tmpl,
+
+  (* Apply rewrite rule to all e-classes *)
+  fun applyRewrite (eg, rule) =
+    applyToClasses (eg, rule, classes eg),
+
+  fun applyToClasses (eg, rule, cls) =
+    case cls of
+      [] -> eg
+    | (id, _) :: rest ->
+        let eg1 = applyToClass (eg, rule, id) in
+        applyToClasses (eg1, rule, rest),
+
+  fun applyToClass (eg, rule, id) =
+    case matchPattern (eg, id, rulePattern rule, []) of
+      Some subst ->
+        let (rhsId, eg1) = instantiate (eg, ruleTemplate rule, subst) in
+        union (eg1, id, rhsId)
+    | None -> eg,
+
+  (* Saturate e-graph with rewrite rules *)
+  fun saturate (eg, rules, maxIters) =
+    if maxIters <= 0 then eg
+    else
+      let eg1 = applyRules (eg, rules) in
+      let eg2 = rebuild eg1 in
+      saturate (eg2, rules, maxIters - 1),
+
+  fun applyRules (eg, rules) =
+    case rules of
+      [] -> eg
+    | rule :: rest ->
+        let eg1 = applyRewrite (eg, rule) in
+        applyRules (eg1, rest),
+
+  (* Extract minimum cost term *)
+  fun extract (eg, costFn, rootId) =
+    let (cid, _) = find (eg, rootId) in
+    let (_, expr, _) = extractMemo (eg, costFn, cid, []) in
+    expr,
+
+  fun extractMemo (eg, costFn, id, memo) =
+    case assocFind (id, memo) of
+      Some (cost, expr) -> (cost, expr, memo)
+    | None ->
+        let nodes = case assocFind (id, classes eg) of Some ns -> ns | None -> [] in
+        let (bestCost, bestExpr, memo2) = extractBest (eg, costFn, nodes, 1000000.0, Expr.Const 0.0, memo) in
+        let memo3 = assocAdd (id, (bestCost, bestExpr), memo2) in
+        (bestCost, bestExpr, memo3),
+
+  fun extractBest (eg, costFn, nodes, bestCost, bestExpr, memo) =
+    case nodes of
+      [] -> (bestCost, bestExpr, memo)
+    | node :: rest ->
+        let (cost, expr, memo2) = extractNode (eg, costFn, node, memo) in
+        let (bc, be, memo3) = if cost < bestCost then (cost, expr, memo2) else (bestCost, bestExpr, memo2) in
+        extractBest (eg, costFn, rest, bc, be, memo3),
+
+  fun extractNode (eg, costFn, node, memo) =
+    case node of
+      ENode.EConst r ->
+        let cost = costFn (ENode.EConst r) in
+        (cost, Expr.Const r, memo)
+    | ENode.EVar v ->
+        let cost = costFn (ENode.EVar v) in
+        (cost, Expr.Var v, memo)
+    | ENode.EAdd (a, b) ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let (cb, eb, memo2) = extractMemo (eg, costFn, b, memo1) in
+        let cost = costFn (ENode.EAdd (a, b)) + ca + cb in
+        (cost, Expr.Add (ea, eb), memo2)
+    | ENode.ESub (a, b) ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let (cb, eb, memo2) = extractMemo (eg, costFn, b, memo1) in
+        let cost = costFn (ENode.ESub (a, b)) + ca + cb in
+        (cost, Expr.Sub (ea, eb), memo2)
+    | ENode.EMul (a, b) ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let (cb, eb, memo2) = extractMemo (eg, costFn, b, memo1) in
+        let cost = costFn (ENode.EMul (a, b)) + ca + cb in
+        (cost, Expr.Mul (ea, eb), memo2)
+    | ENode.EDiv (a, b) ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let (cb, eb, memo2) = extractMemo (eg, costFn, b, memo1) in
+        let cost = costFn (ENode.EDiv (a, b)) + ca + cb in
+        (cost, Expr.Div (ea, eb), memo2)
+    | ENode.EPow (a, b) ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let (cb, eb, memo2) = extractMemo (eg, costFn, b, memo1) in
+        let cost = costFn (ENode.EPow (a, b)) + ca + cb in
+        (cost, Expr.Pow (ea, eb), memo2)
+    | ENode.ESin a ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let cost = costFn (ENode.ESin a) + ca in
+        (cost, Expr.Sin ea, memo1)
+    | ENode.ECos a ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let cost = costFn (ENode.ECos a) + ca in
+        (cost, Expr.Cos ea, memo1)
+    | ENode.ELog a ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let cost = costFn (ENode.ELog a) + ca in
+        (cost, Expr.Log ea, memo1)
+    | ENode.ENeg a ->
+        let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
+        let cost = costFn (ENode.ENeg a) + ca in
+        (cost, Expr.Mul (Expr.Const (0.0 - 1.0), ea), memo1)
+}

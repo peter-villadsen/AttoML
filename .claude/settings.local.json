@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "WebSearch",
+      "WebFetch(domain:reference.wolfram.com)",
+      "WebFetch(domain:blog.wolfram.com)",
+      "WebFetch(domain:bernsteinbear.com)",
+      "WebFetch(domain:blog.sigplan.org)",
+      "WebFetch(domain:www.stephendiehl.com)",
+      "WebFetch(domain:juliasymbolics.github.io)",
+      "Bash(git log:*)",
+      "Bash(git checkout:*)",
+      "Bash(if [ ! -d \"examples\" ])",
+      "Bash(then mkdir examples)",
+      "Bash(fi)",
+      "Bash(ls:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet run:*)"
+    ]
+  }
+}
