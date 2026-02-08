@@ -1008,7 +1008,7 @@ namespace AttoML.Core.Parsing
                     break;
                 }
             }
-            return new TypeDecl(name, ctors);
+            return new TypeDecl(name, new List<string>(), ctors);
         }
 
         private ExceptionDecl ParseExceptionDecl()

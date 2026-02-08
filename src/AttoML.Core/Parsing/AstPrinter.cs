@@ -197,7 +197,23 @@ namespace AttoML.Core.Parsing
             switch (decl)
             {
                 case TypeDecl td:
-                    sb.Append("type ").Append(td.Name).Append(" = ");
+                    sb.Append("type ");
+                    // Print type parameters if present
+                    if (td.TypeParams.Count == 1)
+                    {
+                        sb.Append("'").Append(td.TypeParams[0]).Append(" ");
+                    }
+                    else if (td.TypeParams.Count > 1)
+                    {
+                        sb.Append("(");
+                        for (int i = 0; i < td.TypeParams.Count; i++)
+                        {
+                            if (i > 0) sb.Append(", ");
+                            sb.Append("'").Append(td.TypeParams[i]);
+                        }
+                        sb.Append(") ");
+                    }
+                    sb.Append(td.Name).Append(" = ");
                     for (int i = 0; i < td.Ctors.Count; i++)
                     {
                         if (i > 0) sb.Append(" | ");

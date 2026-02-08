@@ -1,0 +1,2 @@
+(* Test loading Result module *)
+Result.isOk (Ok 42)

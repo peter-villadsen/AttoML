@@ -35,7 +35,7 @@ namespace AttoML.Core.Modules
     {
         public Dictionary<string, SignatureInfo> Signatures { get; } = new();
         public Dictionary<string, StructureInfo> Structures { get; } = new();
-        public Dictionary<string, (string TypeName, List<(string Ctor, TypeT? Payload)> Ctors)> Adts { get; } = new();
+        public Dictionary<string, (string TypeName, List<string> TypeParams, List<(string Ctor, TypeT? Payload)> Ctors)> Adts { get; } = new();
         public Dictionary<string, TypeT?> Exceptions { get; } = new(); // name -> payload type (null for none)
 
         public void LoadDecls(IEnumerable<ModuleDecl> decls)
@@ -62,7 +62,7 @@ namespace AttoML.Core.Modules
                         {
                             ctors.Add((c.Name, c.PayloadType == null ? null : TypeFromTypeExpr(c.PayloadType)));
                         }
-                        Adts[td.Name] = (td.Name, ctors);
+                        Adts[td.Name] = (td.Name, td.TypeParams, ctors);
                         break;
                     case ExceptionDecl ed:
                         Exceptions[ed.Name] = ed.PayloadType == null ? null : TypeFromTypeExpr(ed.PayloadType);
@@ -226,6 +226,8 @@ namespace AttoML.Core.Modules
             // Inject ADT constructors
             foreach (var adt in Adts.Values)
             {
+                // For now, constructors remain monomorphic (TypeParams not used yet)
+                // Will be updated in Phase 3 to create polymorphic constructors
                 foreach (var (ctor, payload) in adt.Ctors)
                 {
                     TypeT ctorType = payload == null ? new TAdt(adt.TypeName) : new TFun(payload, new TAdt(adt.TypeName));
