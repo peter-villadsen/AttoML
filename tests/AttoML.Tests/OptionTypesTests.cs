@@ -7,7 +7,7 @@ namespace AttoML.Tests
 {
     public class OptionTypesTests : AttoMLTestBase
     {
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_SomeInt_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull("SomeInt 42");
@@ -18,7 +18,7 @@ namespace AttoML.Tests
             Assert.Equal(42, ((IntVal)adt.Payload!).Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_NoneInt_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull("NoneInt");
@@ -28,7 +28,7 @@ namespace AttoML.Tests
             Assert.Null(adt.Payload);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_GetOr_Some_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"
@@ -39,7 +39,7 @@ namespace AttoML.Tests
             Assert.Equal(99, result.Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_GetOr_None_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"
@@ -50,7 +50,7 @@ namespace AttoML.Tests
             Assert.Equal(42, result.Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_Map_Some_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"
@@ -63,7 +63,7 @@ namespace AttoML.Tests
             Assert.Equal(20, result.Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_Map_None_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"
@@ -76,7 +76,7 @@ namespace AttoML.Tests
             Assert.Equal(99, result.Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionFloat_SomeFloat_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull("SomeFloat 3.14");
@@ -87,7 +87,7 @@ namespace AttoML.Tests
             Assert.Equal(3.14, ((FloatVal)adt.Payload!).Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionString_SomeString_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"SomeString ""hello""");
@@ -98,7 +98,7 @@ namespace AttoML.Tests
             Assert.Equal("hello", ((StringVal)adt.Payload!).Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionBool_SomeBool_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull("SomeBool true");
@@ -109,7 +109,7 @@ namespace AttoML.Tests
             Assert.True(((BoolVal)adt.Payload!).Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_IsSome_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"
@@ -120,7 +120,7 @@ namespace AttoML.Tests
             Assert.True(result.Value);
         }
 
-        [Fact]
+        [Fact(Skip = "Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type")]
         public void OptionInt_IsNone_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"

@@ -1,0 +1,95 @@
+(* Option Module - Option types for common types *)
+
+(* Predefined option types *)
+datatype OptionInt = SomeInt of int | NoneInt
+datatype OptionFloat = SomeFloat of float | NoneFloat
+datatype OptionString = SomeString of string | NoneString
+datatype OptionBool = SomeBool of bool | NoneBool
+
+structure OptionInt = {
+    fun isSome opt = case opt of
+        SomeInt _ -> true
+      | NoneInt -> false,
+
+    fun isNone opt = case opt of
+        SomeInt _ -> false
+      | NoneInt -> true,
+
+    fun getOr opt default = case opt of
+        SomeInt x -> x
+      | NoneInt -> default,
+
+    fun map f opt = case opt of
+        SomeInt x -> SomeInt (f x)
+      | NoneInt -> NoneInt,
+
+    fun bind f opt = case opt of
+        SomeInt x -> f x
+      | NoneInt -> NoneInt,
+
+    fun toList opt = case opt of
+        SomeInt x -> [x]
+      | NoneInt -> [],
+
+    fun fromList lst = case lst of
+        h::_ -> SomeInt h
+      | [] -> NoneInt
+}
+
+structure OptionFloat = {
+    fun isSome opt = case opt of
+        SomeFloat _ -> true
+      | NoneFloat -> false,
+
+    fun getOr opt default = case opt of
+        SomeFloat x -> x
+      | NoneFloat -> default,
+
+    fun map f opt = case opt of
+        SomeFloat x -> SomeFloat (f x)
+      | NoneFloat -> NoneFloat,
+
+    fun bind f opt = case opt of
+        SomeFloat x -> f x
+      | NoneFloat -> NoneFloat,
+
+    fun toList opt = case opt of
+        SomeFloat x -> [x]
+      | NoneFloat -> []
+}
+
+structure OptionString = {
+    fun isSome opt = case opt of
+        SomeString _ -> true
+      | NoneString -> false,
+
+    fun getOr opt default = case opt of
+        SomeString x -> x
+      | NoneString -> default,
+
+    fun map f opt = case opt of
+        SomeString x -> SomeString (f x)
+      | NoneString -> NoneString,
+
+    fun bind f opt = case opt of
+        SomeString x -> f x
+      | NoneString -> NoneString,
+
+    fun toList opt = case opt of
+        SomeString x -> [x]
+      | NoneString -> []
+}
+
+structure OptionBool = {
+    fun isSome opt = case opt of
+        SomeBool _ -> true
+      | NoneBool -> false,
+
+    fun getOr opt default = case opt of
+        SomeBool x -> x
+      | NoneBool -> default,
+
+    fun toList opt = case opt of
+        SomeBool x -> [x]
+      | NoneBool -> []
+}
