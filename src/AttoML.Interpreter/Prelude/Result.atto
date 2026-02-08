@@ -39,9 +39,7 @@ structure Result = {
       | Error e -> Error e,
 
     (* Chain results (alias for bind) *)
-    fun andThen f res = case res of
-        Ok x -> f x
-      | Error e -> Error e,
+    fun andThen f res = bind f res,
 
     (* Provide alternative on Error *)
     fun orElse res alt = case res of

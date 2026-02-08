@@ -22,7 +22,7 @@ namespace AttoML.Tests
         [Fact]
         public void EGraph_Empty_Works()
         {
-            var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + "\nlet eg = EGraph.empty 0 in eg.nextId");
+            var (_, ev, decls, mods, expr, _) = CompileAndInitializeFull(LoadPrelude() + "\nlet eg = EGraph.empty 0 in EGraph.nextId eg");
             ev.ApplyOpen(decls);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var intVal = Assert.IsType<IntVal>(v);
@@ -49,7 +49,7 @@ namespace AttoML.Tests
                 let eg0 = EGraph.empty 0 in
                 let (id1, eg1) = EGraph.add (eg0, Expr.Const 1.0) in
                 let (id2, eg2) = EGraph.add (eg1, Expr.Const 2.0) in
-                eg2.nextId");
+                EGraph.nextId eg2");
             ev.ApplyOpen(decls);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var intVal = Assert.IsType<IntVal>(v);
@@ -109,7 +109,7 @@ namespace AttoML.Tests
                 let eg0 = EGraph.empty 0 in
                 let e = Expr.Add (Expr.Const 1.0, Expr.Const 2.0) in
                 let (id, eg1) = EGraph.add (eg0, e) in
-                eg1.nextId");
+                EGraph.nextId eg1");
             ev.ApplyOpen(decls);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var intVal = Assert.IsType<IntVal>(v);

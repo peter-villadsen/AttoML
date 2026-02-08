@@ -118,6 +118,65 @@ namespace AttoML.Interpreter.Runtime
             Payload = payload;
         }
         public override string ToString() => Payload == null ? $"<{Ctor}>" : $"<{Ctor} {Payload}>";
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is not AdtVal other) return false;
+            if (Ctor != other.Ctor) return false;
+            if (Payload == null && other.Payload == null) return true;
+            if (Payload == null || other.Payload == null) return false;
+            return ValuesEqual(Payload, other.Payload);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = Ctor.GetHashCode();
+                if (Payload != null)
+                {
+                    hash = hash * 397 ^ GetValueHashCode(Payload);
+                }
+                return hash;
+            }
+        }
+
+        private static bool ValuesEqual(Value v1, Value v2)
+        {
+            return (v1, v2) switch
+            {
+                (IntVal i1, IntVal i2) => i1.Value == i2.Value,
+                (FloatVal f1, FloatVal f2) => f1.Value == f2.Value,
+                (StringVal s1, StringVal s2) => s1.Value == s2.Value,
+                (BoolVal b1, BoolVal b2) => b1.Value == b2.Value,
+                (UnitVal, UnitVal) => true,
+                (TupleVal t1, TupleVal t2) => t1.Items.Count == t2.Items.Count &&
+                    t1.Items.Zip(t2.Items).All(pair => ValuesEqual(pair.First, pair.Second)),
+                (ListVal l1, ListVal l2) => l1.Items.Count == l2.Items.Count &&
+                    l1.Items.Zip(l2.Items).All(pair => ValuesEqual(pair.First, pair.Second)),
+                (AdtVal a1, AdtVal a2) => a1.Equals(a2),
+                (RecordVal r1, RecordVal r2) => r1.Fields.Count == r2.Fields.Count &&
+                    r1.Fields.All(kv => r2.Fields.ContainsKey(kv.Key) && ValuesEqual(kv.Value, r2.Fields[kv.Key])),
+                _ => ReferenceEquals(v1, v2)
+            };
+        }
+
+        private static int GetValueHashCode(Value v)
+        {
+            return v switch
+            {
+                IntVal i => i.Value.GetHashCode(),
+                FloatVal f => f.Value.GetHashCode(),
+                StringVal s => s.Value.GetHashCode(),
+                BoolVal b => b.Value.GetHashCode(),
+                UnitVal => 0,
+                TupleVal t => t.Items.Aggregate(0, (hash, elem) => unchecked(hash * 397 ^ GetValueHashCode(elem))),
+                ListVal l => l.Items.Aggregate(0, (hash, elem) => unchecked(hash * 397 ^ GetValueHashCode(elem))),
+                AdtVal a => a.GetHashCode(),
+                RecordVal r => r.Fields.Aggregate(0, (hash, kv) => unchecked(hash * 397 ^ kv.Key.GetHashCode() ^ GetValueHashCode(kv.Value))),
+                _ => v.GetHashCode()
+            };
+        }
     }
 
     public sealed class ClosureVal : Value

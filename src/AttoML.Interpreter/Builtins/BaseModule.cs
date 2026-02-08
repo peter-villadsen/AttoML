@@ -30,7 +30,10 @@ namespace AttoML.Interpreter.Builtins
             if (a is StringVal asv && b is StringVal bsv) return asv.Value == bsv.Value;
             if (a is BoolVal ab && b is BoolVal bb) return ab.Value == bb.Value;
             if (a is UnitVal && b is UnitVal) return true;
-            return false;
+            // Use the Equals override for ADT values (and other types)
+            if (a is AdtVal || b is AdtVal) return a.Equals(b);
+            // Fallback to reference equality for other types
+            return ReferenceEquals(a, b);
         }
 
         private static Value Curry2(Func<Value, Value, Value> f)
