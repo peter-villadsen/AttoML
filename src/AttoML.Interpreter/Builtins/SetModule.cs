@@ -11,29 +11,25 @@ namespace AttoML.Interpreter.Builtins
         {
             var members = new Dictionary<string, Value>
             {
-                ["empty"] = new SetVal(new HashSet<int>()),
+                ["empty"] = new SetVal(new HashSet<Value>(ValueEqualityComparer.Instance)),
 
                 ["singleton"] = new ClosureVal(x =>
                 {
-                    if (x is IntVal iv)
-                    {
-                        var set = new HashSet<int> { iv.Value };
-                        return new SetVal(set);
-                    }
-                    throw new Exception("singleton expects an int");
+                    var set = new HashSet<Value>(ValueEqualityComparer.Instance) { x };
+                    return new SetVal(set);
                 }),
 
                 ["add"] = new ClosureVal(x =>
                 {
                     return new ClosureVal(s =>
                     {
-                        if (x is IntVal iv && s is SetVal sv)
+                        if (s is SetVal sv)
                         {
-                            var newSet = new HashSet<int>(sv.Elements);
-                            newSet.Add(iv.Value);
+                            var newSet = new HashSet<Value>(sv.Elements, ValueEqualityComparer.Instance);
+                            newSet.Add(x);
                             return new SetVal(newSet);
                         }
-                        throw new Exception("add expects an int and a set");
+                        throw new Exception("add expects a value and a set");
                     });
                 }),
 
@@ -41,13 +37,13 @@ namespace AttoML.Interpreter.Builtins
                 {
                     return new ClosureVal(s =>
                     {
-                        if (x is IntVal iv && s is SetVal sv)
+                        if (s is SetVal sv)
                         {
-                            var newSet = new HashSet<int>(sv.Elements);
-                            newSet.Remove(iv.Value);
+                            var newSet = new HashSet<Value>(sv.Elements, ValueEqualityComparer.Instance);
+                            newSet.Remove(x);
                             return new SetVal(newSet);
                         }
-                        throw new Exception("remove expects an int and a set");
+                        throw new Exception("remove expects a value and a set");
                     });
                 }),
 
@@ -55,11 +51,11 @@ namespace AttoML.Interpreter.Builtins
                 {
                     return new ClosureVal(s =>
                     {
-                        if (x is IntVal iv && s is SetVal sv)
+                        if (s is SetVal sv)
                         {
-                            return new BoolVal(sv.Elements.Contains(iv.Value));
+                            return new BoolVal(sv.Elements.Contains(x, ValueEqualityComparer.Instance));
                         }
-                        throw new Exception("contains expects an int and a set");
+                        throw new Exception("contains expects a value and a set");
                     });
                 }),
 
@@ -83,7 +79,7 @@ namespace AttoML.Interpreter.Builtins
                     {
                         if (s1 is SetVal sv1 && s2 is SetVal sv2)
                         {
-                            var newSet = new HashSet<int>(sv1.Elements);
+                            var newSet = new HashSet<Value>(sv1.Elements, ValueEqualityComparer.Instance);
                             newSet.UnionWith(sv2.Elements);
                             return new SetVal(newSet);
                         }
@@ -97,7 +93,7 @@ namespace AttoML.Interpreter.Builtins
                     {
                         if (s1 is SetVal sv1 && s2 is SetVal sv2)
                         {
-                            var newSet = new HashSet<int>(sv1.Elements);
+                            var newSet = new HashSet<Value>(sv1.Elements, ValueEqualityComparer.Instance);
                             newSet.IntersectWith(sv2.Elements);
                             return new SetVal(newSet);
                         }
@@ -111,7 +107,7 @@ namespace AttoML.Interpreter.Builtins
                     {
                         if (s1 is SetVal sv1 && s2 is SetVal sv2)
                         {
-                            var newSet = new HashSet<int>(sv1.Elements);
+                            var newSet = new HashSet<Value>(sv1.Elements, ValueEqualityComparer.Instance);
                             newSet.ExceptWith(sv2.Elements);
                             return new SetVal(newSet);
                         }
@@ -135,8 +131,7 @@ namespace AttoML.Interpreter.Builtins
                 {
                     if (s is SetVal sv)
                     {
-                        var values = sv.Elements.Select(i => new IntVal(i) as Value).ToList();
-                        return new ListVal(values);
+                        return new ListVal(sv.Elements.ToList());
                     }
                     throw new Exception("toList expects a set");
                 }),
@@ -145,14 +140,7 @@ namespace AttoML.Interpreter.Builtins
                 {
                     if (lst is ListVal lv)
                     {
-                        var set = new HashSet<int>();
-                        foreach (var v in lv.Items)
-                        {
-                            if (v is IntVal iv)
-                                set.Add(iv.Value);
-                            else
-                                throw new Exception("fromList expects a list of ints");
-                        }
+                        var set = new HashSet<Value>(lv.Items, ValueEqualityComparer.Instance);
                         return new SetVal(set);
                     }
                     throw new Exception("fromList expects a list");

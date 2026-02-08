@@ -28,8 +28,21 @@ namespace AttoML.Core.Types
         public static readonly TConst String = new("string");
         public static readonly TConst Unit = new("unit");
         public static readonly TConst Exn = new("exn");
-        public static readonly TConst Set = new("Set");
-        public static readonly TConst Map = new("Map");
+    }
+
+    public sealed class TSet : Type
+    {
+        public Type Elem { get; }
+        public TSet(Type elem){ Elem=elem; }
+        public override string ToString() => Elem.ToString() + " set";
+    }
+
+    public sealed class TMap : Type
+    {
+        public Type Key { get; }
+        public Type Value { get; }
+        public TMap(Type key, Type value){ Key=key; Value=value; }
+        public override string ToString() => $"({Key}, {Value}) map";
     }
 
     public sealed class TFun : Type
@@ -74,8 +87,7 @@ namespace AttoML.Core.Types
         public IReadOnlyList<TVar> Quantified { get; }
         public Type Type { get; }
         public Scheme(IReadOnlyList<TVar> qs, Type t){ Quantified=qs; Type=t; }
-        public override string ToString() =>
-            Quantified.Count == 0 ? Type.ToString() : $"forall {string.Join(" ", Quantified)}. {Type}";
+        public override string ToString() => TypePrinter.Print(this);
     }
 
     public sealed class Subst
@@ -115,6 +127,10 @@ namespace AttoML.Core.Types
                     ApplyWithDepth(f.To, visiting, depth + 1)),
                 TTuple tt => new TTuple(tt.Items.Select(i => ApplyWithDepth(i, visiting, depth + 1)).ToList()),
                 TList tl => new TList(ApplyWithDepth(tl.Elem, visiting, depth + 1)),
+                TSet ts => new TSet(ApplyWithDepth(ts.Elem, visiting, depth + 1)),
+                TMap tm => new TMap(
+                    ApplyWithDepth(tm.Key, visiting, depth + 1),
+                    ApplyWithDepth(tm.Value, visiting, depth + 1)),
                 TRecord tr => new TRecord(tr.Fields.ToDictionary(kv => kv.Key, kv => ApplyWithDepth(kv.Value, visiting, depth + 1))),
                 TAdt ta => new TAdt(ta.Name, ta.TypeArgs.Select(a => ApplyWithDepth(a, visiting, depth + 1)).ToList()),
                 _ => t

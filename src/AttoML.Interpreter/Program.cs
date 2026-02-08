@@ -2,6 +2,7 @@
 using System.IO;
 using AttoML.Core;
 using AttoML.Core.Parsing;
+using AttoML.Core.Types;
 using AttoML.Interpreter.Builtins;
 using AttoML.Interpreter.Runtime;
 
@@ -97,7 +98,7 @@ namespace AttoML.Interpreter
 			{
 				var (name, ty) = valTypes[i];
 				evaluator.GlobalEnv.TryGet(name, out var vv);
-				Console.WriteLine($"val {name} : {ty} = {vv}");
+				Console.WriteLine($"val {name} : {TypePrinter.Print(ty)} = {vv}");
 			}
 			if (expr != null)
 			{
@@ -108,7 +109,7 @@ namespace AttoML.Interpreter
 				}
 				var v = evaluator.Eval(expr, evaluator.GlobalEnv);
 				evaluator.GlobalEnv.Set("it", v);
-				var typeStr = exprType?.ToString() ?? "<unknown>";
+				var typeStr = exprType != null ? TypePrinter.Print(exprType) : "<unknown>";
 				Console.WriteLine($"val it : {typeStr} = {v}");
 				if (exprType != null)
 				{
@@ -122,7 +123,7 @@ namespace AttoML.Interpreter
 				if (valTypes.Count > 0)
 				{
 					var (name, ty) = valTypes[^1];
-					Console.WriteLine($"val it : {ty} = {lastVal}");
+					Console.WriteLine($"val it : {TypePrinter.Print(ty)} = {lastVal}");
 					frontend.BaseTypeEnv.Add("it", new AttoML.Core.Types.Scheme(System.Array.Empty<AttoML.Core.Types.TVar>(), ty));
 				}
 			}
@@ -246,7 +247,7 @@ namespace AttoML.Interpreter
 					{
 						var (name, ty) = valTypes[i];
 						evaluator.GlobalEnv.TryGet(name, out var vv);
-						Console.WriteLine($"val {name} : {ty} = {vv}");
+						Console.WriteLine($"val {name} : {TypePrinter.Print(ty)} = {vv}");
 					}
 					if (expr != null)
 					{
@@ -257,7 +258,7 @@ namespace AttoML.Interpreter
 						}
 						var v = evaluator.Eval(expr, evaluator.GlobalEnv);
 						evaluator.GlobalEnv.Set("it", v);
-						var typeStr = exprType?.ToString() ?? "<unknown>";
+						var typeStr = exprType != null ? TypePrinter.Print(exprType) : "<unknown>";
 						Console.WriteLine($"val it : {typeStr} = {v}");
 						if (exprType != null)
 						{
@@ -269,7 +270,7 @@ namespace AttoML.Interpreter
 						if (valTypes.Count > 0)
 						{
 							var (name, ty) = valTypes[^1];
-							Console.WriteLine($"val it : {ty} = {lastVal}");
+							Console.WriteLine($"val it : {TypePrinter.Print(ty)} = {lastVal}");
 							frontend.BaseTypeEnv.Add("it", new AttoML.Core.Types.Scheme(System.Array.Empty<AttoML.Core.Types.TVar>(), ty));
 						}
 					}

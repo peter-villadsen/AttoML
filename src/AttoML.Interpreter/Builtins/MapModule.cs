@@ -11,18 +11,14 @@ namespace AttoML.Interpreter.Builtins
         {
             var members = new Dictionary<string, Value>
             {
-                ["empty"] = new MapVal(new Dictionary<int, int>()),
+                ["empty"] = new MapVal(new Dictionary<Value, Value>(ValueEqualityComparer.Instance)),
 
                 ["singleton"] = new ClosureVal(k =>
                 {
                     return new ClosureVal(v =>
                     {
-                        if (k is IntVal kv && v is IntVal vv)
-                        {
-                            var map = new Dictionary<int, int> { [kv.Value] = vv.Value };
-                            return new MapVal(map);
-                        }
-                        throw new Exception("singleton expects two ints");
+                        var map = new Dictionary<Value, Value>(ValueEqualityComparer.Instance) { [k] = v };
+                        return new MapVal(map);
                     });
                 }),
 
@@ -32,13 +28,13 @@ namespace AttoML.Interpreter.Builtins
                     {
                         return new ClosureVal(m =>
                         {
-                            if (k is IntVal kv && v is IntVal vv && m is MapVal mv)
+                            if (m is MapVal mv)
                             {
-                                var newMap = new Dictionary<int, int>(mv.Entries);
-                                newMap[kv.Value] = vv.Value;
+                                var newMap = new Dictionary<Value, Value>(mv.Entries, ValueEqualityComparer.Instance);
+                                newMap[k] = v;
                                 return new MapVal(newMap);
                             }
-                            throw new Exception("add expects two ints and a map");
+                            throw new Exception("add expects a key, value, and a map");
                         });
                     });
                 }),
@@ -47,13 +43,13 @@ namespace AttoML.Interpreter.Builtins
                 {
                     return new ClosureVal(m =>
                     {
-                        if (k is IntVal kv && m is MapVal mv)
+                        if (m is MapVal mv)
                         {
-                            var newMap = new Dictionary<int, int>(mv.Entries);
-                            newMap.Remove(kv.Value);
+                            var newMap = new Dictionary<Value, Value>(mv.Entries, ValueEqualityComparer.Instance);
+                            newMap.Remove(k);
                             return new MapVal(newMap);
                         }
-                        throw new Exception("remove expects an int and a map");
+                        throw new Exception("remove expects a key and a map");
                     });
                 }),
 
@@ -61,13 +57,13 @@ namespace AttoML.Interpreter.Builtins
                 {
                     return new ClosureVal(m =>
                     {
-                        if (k is IntVal kv && m is MapVal mv)
+                        if (m is MapVal mv)
                         {
-                            if (mv.Entries.TryGetValue(kv.Value, out var val))
-                                return new AdtVal("Some", new IntVal(val));
+                            if (mv.Entries.TryGetValue(k, out var val))
+                                return new AdtVal("Some", val);
                             return new AdtVal("None", null);
                         }
-                        throw new Exception("get expects an int and a map");
+                        throw new Exception("get expects a key and a map");
                     });
                 }),
 
@@ -75,11 +71,11 @@ namespace AttoML.Interpreter.Builtins
                 {
                     return new ClosureVal(m =>
                     {
-                        if (k is IntVal kv && m is MapVal mv)
+                        if (m is MapVal mv)
                         {
-                            return new BoolVal(mv.Entries.ContainsKey(kv.Value));
+                            return new BoolVal(mv.Entries.ContainsKey(k));
                         }
-                        throw new Exception("contains expects an int and a map");
+                        throw new Exception("contains expects a key and a map");
                     });
                 }),
 
@@ -101,8 +97,7 @@ namespace AttoML.Interpreter.Builtins
                 {
                     if (m is MapVal mv)
                     {
-                        var values = mv.Entries.Keys.Select(k => new IntVal(k) as Value).ToList();
-                        return new ListVal(values);
+                        return new ListVal(mv.Entries.Keys.ToList());
                     }
                     throw new Exception("keys expects a map");
                 }),
@@ -111,8 +106,7 @@ namespace AttoML.Interpreter.Builtins
                 {
                     if (m is MapVal mv)
                     {
-                        var values = mv.Entries.Values.Select(v => new IntVal(v) as Value).ToList();
-                        return new ListVal(values);
+                        return new ListVal(mv.Entries.Values.ToList());
                     }
                     throw new Exception("values expects a map");
                 }),
@@ -122,7 +116,7 @@ namespace AttoML.Interpreter.Builtins
                     if (m is MapVal mv)
                     {
                         var pairs = mv.Entries.Select(kv =>
-                            new TupleVal(new List<Value> { new IntVal(kv.Key), new IntVal(kv.Value) }) as Value
+                            new TupleVal(new List<Value> { kv.Key, kv.Value }) as Value
                         ).ToList();
                         return new ListVal(pairs);
                     }
@@ -133,16 +127,15 @@ namespace AttoML.Interpreter.Builtins
                 {
                     if (lst is ListVal lv)
                     {
-                        var map = new Dictionary<int, int>();
+                        var map = new Dictionary<Value, Value>(ValueEqualityComparer.Instance);
                         foreach (var v in lv.Items)
                         {
-                            if (v is TupleVal tv && tv.Items.Count == 2 &&
-                                tv.Items[0] is IntVal kv && tv.Items[1] is IntVal vv)
+                            if (v is TupleVal tv && tv.Items.Count == 2)
                             {
-                                map[kv.Value] = vv.Value;
+                                map[tv.Items[0]] = tv.Items[1];
                             }
                             else
-                                throw new Exception("fromList expects a list of (int * int) tuples");
+                                throw new Exception("fromList expects a list of tuples");
                         }
                         return new MapVal(map);
                     }
@@ -155,14 +148,11 @@ namespace AttoML.Interpreter.Builtins
                     {
                         if (f is ClosureVal fv && m is MapVal mv)
                         {
-                            var newMap = new Dictionary<int, int>();
+                            var newMap = new Dictionary<Value, Value>(ValueEqualityComparer.Instance);
                             foreach (var kv in mv.Entries)
                             {
-                                var result = fv.Invoke(new IntVal(kv.Value));
-                                if (result is IntVal iv)
-                                    newMap[kv.Key] = iv.Value;
-                                else
-                                    throw new Exception("mapValues function must return int");
+                                var result = fv.Invoke(kv.Value);
+                                newMap[kv.Key] = result;
                             }
                             return new MapVal(newMap);
                         }
@@ -181,12 +171,10 @@ namespace AttoML.Interpreter.Builtins
                                 var current = acc;
                                 foreach (var kv in mv.Entries)
                                 {
-                                    var keyVal = new IntVal(kv.Key);
-                                    var valVal = new IntVal(kv.Value);
-                                    var partial = fv.Invoke(keyVal);
+                                    var partial = fv.Invoke(kv.Key);
                                     if (partial is ClosureVal cv)
                                     {
-                                        var partial2 = cv.Invoke(valVal);
+                                        var partial2 = cv.Invoke(kv.Value);
                                         if (partial2 is ClosureVal cv2)
                                         {
                                             current = cv2.Invoke(current);

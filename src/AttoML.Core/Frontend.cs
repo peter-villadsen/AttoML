@@ -130,42 +130,47 @@ namespace AttoML.Core
             // thd3 : ('a * 'b * 'c) -> 'c
             BaseTypeEnv.Add("Tuple.thd3", new Types.Scheme(new[] { t4, t5, t6 }, new Types.TFun(new Types.TTuple(new[] { t4, t5, t6 }), t6)));
 
-            // Set module (operates on int sets)
-            var setT = Types.TConst.Set;
-            BaseTypeEnv.Add("Set.empty", new Types.Scheme(Array.Empty<Types.TVar>(), setT));
-            BaseTypeEnv.Add("Set.singleton", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(intT, setT)));
-            BaseTypeEnv.Add("Set.add", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intT, setT, setT)));
-            BaseTypeEnv.Add("Set.remove", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intT, setT, setT)));
-            BaseTypeEnv.Add("Set.contains", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intT, setT, boolT)));
-            BaseTypeEnv.Add("Set.size", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(setT, intT)));
-            BaseTypeEnv.Add("Set.isEmpty", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(setT, boolT)));
-            BaseTypeEnv.Add("Set.union", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(setT, setT, setT)));
-            BaseTypeEnv.Add("Set.intersect", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(setT, setT, setT)));
-            BaseTypeEnv.Add("Set.diff", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(setT, setT, setT)));
-            BaseTypeEnv.Add("Set.isSubset", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(setT, setT, boolT)));
-            BaseTypeEnv.Add("Set.toList", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(setT, new Types.TList(intT))));
-            BaseTypeEnv.Add("Set.fromList", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(new Types.TList(intT), setT)));
+            // Set module (operates on generic 'a sets)
+            var tSetElem = new Types.TVar();
+            var setT = new Types.TSet(tSetElem);
+            BaseTypeEnv.Add("Set.empty", new Types.Scheme(new[] { tSetElem }, setT));
+            BaseTypeEnv.Add("Set.singleton", new Types.Scheme(new[] { tSetElem }, new Types.TFun(tSetElem, setT)));
+            BaseTypeEnv.Add("Set.add", new Types.Scheme(new[] { tSetElem }, Fun2(tSetElem, setT, setT)));
+            BaseTypeEnv.Add("Set.remove", new Types.Scheme(new[] { tSetElem }, Fun2(tSetElem, setT, setT)));
+            BaseTypeEnv.Add("Set.contains", new Types.Scheme(new[] { tSetElem }, Fun2(tSetElem, setT, boolT)));
+            BaseTypeEnv.Add("Set.size", new Types.Scheme(new[] { tSetElem }, new Types.TFun(setT, intT)));
+            BaseTypeEnv.Add("Set.isEmpty", new Types.Scheme(new[] { tSetElem }, new Types.TFun(setT, boolT)));
+            BaseTypeEnv.Add("Set.union", new Types.Scheme(new[] { tSetElem }, Fun2(setT, setT, setT)));
+            BaseTypeEnv.Add("Set.intersect", new Types.Scheme(new[] { tSetElem }, Fun2(setT, setT, setT)));
+            BaseTypeEnv.Add("Set.diff", new Types.Scheme(new[] { tSetElem }, Fun2(setT, setT, setT)));
+            BaseTypeEnv.Add("Set.isSubset", new Types.Scheme(new[] { tSetElem }, Fun2(setT, setT, boolT)));
+            BaseTypeEnv.Add("Set.toList", new Types.Scheme(new[] { tSetElem }, new Types.TFun(setT, new Types.TList(tSetElem))));
+            BaseTypeEnv.Add("Set.fromList", new Types.Scheme(new[] { tSetElem }, new Types.TFun(new Types.TList(tSetElem), setT)));
 
-            // Map module (operates on int->int maps)
-            var mapT = Types.TConst.Map;
-            BaseTypeEnv.Add("Map.empty", new Types.Scheme(Array.Empty<Types.TVar>(), mapT));
-            BaseTypeEnv.Add("Map.singleton", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intT, intT, mapT)));
-            BaseTypeEnv.Add("Map.add", new Types.Scheme(Array.Empty<Types.TVar>(), Fun3(intT, intT, mapT, mapT)));
-            BaseTypeEnv.Add("Map.remove", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intT, mapT, mapT)));
-            // Map.get returns Option (from prelude), using polymorphic type for now
-            var t8 = new Types.TVar();
-            BaseTypeEnv.Add("Map.get", new Types.Scheme(new[] { t8 }, Fun2(intT, mapT, t8)));
-            BaseTypeEnv.Add("Map.contains", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intT, mapT, boolT)));
-            BaseTypeEnv.Add("Map.size", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(mapT, intT)));
-            BaseTypeEnv.Add("Map.isEmpty", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(mapT, boolT)));
-            BaseTypeEnv.Add("Map.keys", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(mapT, new Types.TList(intT))));
-            BaseTypeEnv.Add("Map.values", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(mapT, new Types.TList(intT))));
-            var intPairT = new Types.TTuple(new[] { intT, intT });
-            BaseTypeEnv.Add("Map.toList", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(mapT, new Types.TList(intPairT))));
-            BaseTypeEnv.Add("Map.fromList", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(new Types.TList(intPairT), mapT)));
-            BaseTypeEnv.Add("Map.mapValues", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(new Types.TFun(intT, intT), mapT, mapT)));
+            // Map module (operates on generic ('k, 'v) maps)
+            var tMapKey = new Types.TVar();
+            var tMapVal = new Types.TVar();
+            var mapT = new Types.TMap(tMapKey, tMapVal);
+            BaseTypeEnv.Add("Map.empty", new Types.Scheme(new[] { tMapKey, tMapVal }, mapT));
+            BaseTypeEnv.Add("Map.singleton", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, tMapVal, mapT)));
+            BaseTypeEnv.Add("Map.add", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun3(tMapKey, tMapVal, mapT, mapT)));
+            BaseTypeEnv.Add("Map.remove", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, mapT)));
+            // Map.get returns 'v option
+            var tGetOption = new Types.TAdt("option", new[] { tMapVal });
+            BaseTypeEnv.Add("Map.get", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, tGetOption)));
+            BaseTypeEnv.Add("Map.contains", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, boolT)));
+            BaseTypeEnv.Add("Map.size", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, intT)));
+            BaseTypeEnv.Add("Map.isEmpty", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, boolT)));
+            BaseTypeEnv.Add("Map.keys", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(tMapKey))));
+            BaseTypeEnv.Add("Map.values", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(tMapVal))));
+            var kvPairT = new Types.TTuple(new[] { tMapKey, tMapVal });
+            BaseTypeEnv.Add("Map.toList", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(kvPairT))));
+            BaseTypeEnv.Add("Map.fromList", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(new Types.TList(kvPairT), mapT)));
+            var tMapVal2 = new Types.TVar();
+            var mapT2 = new Types.TMap(tMapKey, tMapVal2);
+            BaseTypeEnv.Add("Map.mapValues", new Types.Scheme(new[] { tMapKey, tMapVal, tMapVal2 }, Fun2(new Types.TFun(tMapVal, tMapVal2), mapT, mapT2)));
             var t7 = new Types.TVar();
-            BaseTypeEnv.Add("Map.fold", new Types.Scheme(new[] { t7 }, Fun3(new Types.TFun(intT, new Types.TFun(intT, new Types.TFun(t7, t7))), t7, mapT, t7)));
+            BaseTypeEnv.Add("Map.fold", new Types.Scheme(new[] { tMapKey, tMapVal, t7 }, Fun3(new Types.TFun(tMapKey, new Types.TFun(tMapVal, new Types.TFun(t7, t7))), t7, mapT, t7)));
 
             // Do not pre-register module-specific functions like SymCalc.* in the base env.
             // Their types are inferred from the prelude modules during compilation.

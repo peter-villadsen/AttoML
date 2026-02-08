@@ -78,24 +78,83 @@ namespace AttoML.Interpreter.Runtime
         public override string ToString() => "[" + string.Join(", ", Items.Select(x => x.ToString())) + "]";
     }
 
+    public sealed class ValueEqualityComparer : IEqualityComparer<Value>
+    {
+        public static readonly ValueEqualityComparer Instance = new ValueEqualityComparer();
+
+        public bool Equals(Value? x, Value? y)
+        {
+            if (x == null && y == null) return true;
+            if (x == null || y == null) return false;
+            return ValuesEqual(x, y);
+        }
+
+        public int GetHashCode(Value obj)
+        {
+            return GetValueHashCode(obj);
+        }
+
+        private static bool ValuesEqual(Value v1, Value v2)
+        {
+            return (v1, v2) switch
+            {
+                (IntVal i1, IntVal i2) => i1.Value == i2.Value,
+                (FloatVal f1, FloatVal f2) => f1.Value == f2.Value,
+                (StringVal s1, StringVal s2) => s1.Value == s2.Value,
+                (BoolVal b1, BoolVal b2) => b1.Value == b2.Value,
+                (UnitVal, UnitVal) => true,
+                (TupleVal t1, TupleVal t2) => t1.Items.Count == t2.Items.Count &&
+                    t1.Items.Zip(t2.Items).All(pair => ValuesEqual(pair.First, pair.Second)),
+                (ListVal l1, ListVal l2) => l1.Items.Count == l2.Items.Count &&
+                    l1.Items.Zip(l2.Items).All(pair => ValuesEqual(pair.First, pair.Second)),
+                (AdtVal a1, AdtVal a2) => a1.Equals(a2),
+                (RecordVal r1, RecordVal r2) => r1.Fields.Count == r2.Fields.Count &&
+                    r1.Fields.All(kv => r2.Fields.ContainsKey(kv.Key) && ValuesEqual(kv.Value, r2.Fields[kv.Key])),
+                (SetVal s1, SetVal s2) => s1.Elements.Count == s2.Elements.Count && s1.Elements.All(e => s2.Elements.Contains(e, Instance)),
+                (MapVal m1, MapVal m2) => m1.Entries.Count == m2.Entries.Count &&
+                    m1.Entries.All(kv => m2.Entries.ContainsKey(kv.Key) && ValuesEqual(kv.Value, m2.Entries[kv.Key])),
+                _ => ReferenceEquals(v1, v2)
+            };
+        }
+
+        private static int GetValueHashCode(Value v)
+        {
+            return v switch
+            {
+                IntVal i => i.Value.GetHashCode(),
+                FloatVal f => f.Value.GetHashCode(),
+                StringVal s => s.Value.GetHashCode(),
+                BoolVal b => b.Value.GetHashCode(),
+                UnitVal => 0,
+                TupleVal t => t.Items.Aggregate(0, (hash, elem) => unchecked(hash * 397 ^ GetValueHashCode(elem))),
+                ListVal l => l.Items.Aggregate(0, (hash, elem) => unchecked(hash * 397 ^ GetValueHashCode(elem))),
+                AdtVal a => a.GetHashCode(),
+                RecordVal r => r.Fields.Aggregate(0, (hash, kv) => unchecked(hash * 397 ^ kv.Key.GetHashCode() ^ GetValueHashCode(kv.Value))),
+                SetVal s => s.Elements.Aggregate(0, (hash, elem) => unchecked(hash * 397 ^ GetValueHashCode(elem))),
+                MapVal m => m.Entries.Aggregate(0, (hash, kv) => unchecked(hash * 397 ^ GetValueHashCode(kv.Key) ^ GetValueHashCode(kv.Value))),
+                _ => v.GetHashCode()
+            };
+        }
+    }
+
     public sealed class SetVal : Value
     {
-        public HashSet<int> Elements;
-        public SetVal(HashSet<int> elements)
+        public HashSet<Value> Elements;
+        public SetVal(HashSet<Value> elements)
         {
             Elements = elements;
         }
-        public override string ToString() => "{" + string.Join(", ", Elements.OrderBy(x => x)) + "}";
+        public override string ToString() => "{" + string.Join(", ", Elements.Select(x => x.ToString()).OrderBy(x => x)) + "}";
     }
 
     public sealed class MapVal : Value
     {
-        public Dictionary<int, int> Entries;
-        public MapVal(Dictionary<int, int> entries)
+        public Dictionary<Value, Value> Entries;
+        public MapVal(Dictionary<Value, Value> entries)
         {
             Entries = entries;
         }
-        public override string ToString() => "{" + string.Join(", ", Entries.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key} -> {kv.Value}")) + "}";
+        public override string ToString() => "{" + string.Join(", ", Entries.Select(kv => $"{kv.Key} -> {kv.Value}").OrderBy(x => x)) + "}";
     }
 
     public sealed class RecordVal : Value

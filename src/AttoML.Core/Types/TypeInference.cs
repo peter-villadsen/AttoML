@@ -380,6 +380,17 @@ namespace AttoML.Core.Types
             {
                 return Unify(la.Elem, lb.Elem);
             }
+            if (a is TSet sa && b is TSet sb)
+            {
+                return Unify(sa.Elem, sb.Elem);
+            }
+            if (a is TMap ma && b is TMap mb)
+            {
+                var s1 = Unify(ma.Key, mb.Key);
+                var s2 = Unify(s1.Apply(ma.Value), s1.Apply(mb.Value));
+                s2.Compose(s1);
+                return s2;
+            }
             if (a is TRecord ra && b is TRecord rb)
             {
                 if (ra.Fields.Count != rb.Fields.Count) throw new Exception("Record field counts differ");
@@ -423,6 +434,8 @@ namespace AttoML.Core.Types
                 TFun f => Occurs(v, f.From) || Occurs(v, f.To),
                 TTuple tt => tt.Items.Any(i => Occurs(v, i)),
                 TList tl => Occurs(v, tl.Elem),
+                TSet ts => Occurs(v, ts.Elem),
+                TMap tm => Occurs(v, tm.Key) || Occurs(v, tm.Value),
                 TRecord tr => tr.Fields.Values.Any(i => Occurs(v, i)),
                 TAdt ta => ta.TypeArgs.Any(a => Occurs(v, a)),
                 _ => false
@@ -449,6 +462,8 @@ namespace AttoML.Core.Types
                     TFun f => new TFun(Inst(f.From), Inst(f.To)),
                     TTuple tt => new TTuple(tt.Items.Select(Inst).ToList()),
                     TList tl => new TList(Inst(tl.Elem)),
+                    TSet ts => new TSet(Inst(ts.Elem)),
+                    TMap tm => new TMap(Inst(tm.Key), Inst(tm.Value)),
                     TRecord tr => new TRecord(tr.Fields.ToDictionary(kv => kv.Key, kv => Inst(kv.Value))),
                     TAdt ta => new TAdt(ta.Name, ta.TypeArgs.Select(Inst).ToList()),
                     _ => t
@@ -472,6 +487,13 @@ namespace AttoML.Core.Types
                     break;
                 case TList tl:
                     foreach (var v in FreeTypeVars(tl.Elem)) yield return v;
+                    break;
+                case TSet ts:
+                    foreach (var v in FreeTypeVars(ts.Elem)) yield return v;
+                    break;
+                case TMap tm:
+                    foreach (var v in FreeTypeVars(tm.Key)) yield return v;
+                    foreach (var v in FreeTypeVars(tm.Value)) yield return v;
                     break;
                 case TRecord tr:
                     foreach (var item in tr.Fields.Values)

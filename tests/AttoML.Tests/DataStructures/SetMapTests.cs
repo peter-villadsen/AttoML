@@ -25,7 +25,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Single(sv.Elements);
-			Assert.Contains(42, sv.Elements);
+			Assert.Contains(new IntVal(42), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -37,8 +37,8 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Equal(2, sv.Elements.Count);
-			Assert.Contains(1, sv.Elements);
-			Assert.Contains(3, sv.Elements);
+			Assert.Contains(new IntVal(1), sv.Elements, ValueEqualityComparer.Instance);
+			Assert.Contains(new IntVal(3), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -50,7 +50,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Single(sv.Elements);
-			Assert.Contains(1, sv.Elements);
+			Assert.Contains(new IntVal(1), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -65,7 +65,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Single(sv.Elements);
-			Assert.Contains(2, sv.Elements);
+			Assert.Contains(new IntVal(2), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -140,10 +140,10 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Equal(4, sv.Elements.Count);
-			Assert.Contains(1, sv.Elements);
-			Assert.Contains(2, sv.Elements);
-			Assert.Contains(3, sv.Elements);
-			Assert.Contains(4, sv.Elements);
+			Assert.Contains(new IntVal(1), sv.Elements, ValueEqualityComparer.Instance);
+			Assert.Contains(new IntVal(2), sv.Elements, ValueEqualityComparer.Instance);
+			Assert.Contains(new IntVal(3), sv.Elements, ValueEqualityComparer.Instance);
+			Assert.Contains(new IntVal(4), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -159,8 +159,8 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Equal(2, sv.Elements.Count);
-			Assert.Contains(2, sv.Elements);
-			Assert.Contains(3, sv.Elements);
+			Assert.Contains(new IntVal(2), sv.Elements, ValueEqualityComparer.Instance);
+			Assert.Contains(new IntVal(3), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -176,7 +176,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Single(sv.Elements);
-			Assert.Contains(1, sv.Elements);
+			Assert.Contains(new IntVal(1), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -230,9 +230,9 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<SetVal>(v);
 			var sv = (SetVal)v;
 			Assert.Equal(3, sv.Elements.Count);
-			Assert.Contains(1, sv.Elements);
-			Assert.Contains(2, sv.Elements);
-			Assert.Contains(3, sv.Elements);
+			Assert.Contains(new IntVal(1), sv.Elements, ValueEqualityComparer.Instance);
+			Assert.Contains(new IntVal(2), sv.Elements, ValueEqualityComparer.Instance);
+			Assert.Contains(new IntVal(3), sv.Elements, ValueEqualityComparer.Instance);
 		}
 
 		// Map Module Tests
@@ -255,7 +255,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<MapVal>(v);
 			var mv = (MapVal)v;
 			Assert.Single(mv.Entries);
-			Assert.Equal(42, mv.Entries[1]);
+			Assert.Equal(new IntVal(42), mv.Entries[new IntVal(1)], ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -267,8 +267,8 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<MapVal>(v);
 			var mv = (MapVal)v;
 			Assert.Equal(2, mv.Entries.Count);
-			Assert.Equal(42, mv.Entries[1]);
-			Assert.Equal(99, mv.Entries[2]);
+			Assert.Equal(new IntVal(42), mv.Entries[new IntVal(1)], ValueEqualityComparer.Instance);
+			Assert.Equal(new IntVal(99), mv.Entries[new IntVal(2)], ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -280,7 +280,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<MapVal>(v);
 			var mv = (MapVal)v;
 			Assert.Single(mv.Entries);
-			Assert.Equal(100, mv.Entries[1]);
+			Assert.Equal(new IntVal(100), mv.Entries[new IntVal(1)], ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -295,7 +295,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<MapVal>(v);
 			var mv = (MapVal)v;
 			Assert.Single(mv.Entries);
-			Assert.Equal(99, mv.Entries[2]);
+			Assert.Equal(new IntVal(99), mv.Entries[new IntVal(2)], ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -444,9 +444,9 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<MapVal>(v);
 			var mv = (MapVal)v;
 			Assert.Equal(3, mv.Entries.Count);
-			Assert.Equal(5, mv.Entries[1]);
-			Assert.Equal(6, mv.Entries[2]);
-			Assert.Equal(7, mv.Entries[3]);
+			Assert.Equal(new IntVal(5), mv.Entries[new IntVal(1)], ValueEqualityComparer.Instance);
+			Assert.Equal(new IntVal(6), mv.Entries[new IntVal(2)], ValueEqualityComparer.Instance);
+			Assert.Equal(new IntVal(7), mv.Entries[new IntVal(3)], ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -458,7 +458,7 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<MapVal>(v);
 			var mv = (MapVal)v;
 			Assert.Single(mv.Entries);
-			Assert.Equal(10, mv.Entries[1]);
+			Assert.Equal(new IntVal(10), mv.Entries[new IntVal(1)], ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
@@ -473,8 +473,8 @@ namespace AttoML.Tests.DataStructures
 			Assert.IsType<MapVal>(v);
 			var mv = (MapVal)v;
 			Assert.Equal(2, mv.Entries.Count);
-			Assert.Equal(20, mv.Entries[1]);
-			Assert.Equal(30, mv.Entries[2]);
+			Assert.Equal(new IntVal(20), mv.Entries[new IntVal(1)], ValueEqualityComparer.Instance);
+			Assert.Equal(new IntVal(30), mv.Entries[new IntVal(2)], ValueEqualityComparer.Instance);
 		}
 
 		[Fact]
