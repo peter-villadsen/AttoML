@@ -1,0 +1,2 @@
+datatype 'a option = None | Some of 'a
+let intOpt = Some 42 in let strOpt = Some "hello" in (intOpt, strOpt)

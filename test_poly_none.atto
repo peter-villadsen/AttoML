@@ -1,0 +1,2 @@
+datatype 'a option = None | Some of 'a
+let getOr = fun opt -> fun default -> case opt of None -> default | Some x -> x in (getOr None 42, getOr (Some 99) 0)

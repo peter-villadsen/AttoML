@@ -35,7 +35,7 @@ namespace AttoML.Core.Modules
     {
         public Dictionary<string, SignatureInfo> Signatures { get; } = new();
         public Dictionary<string, StructureInfo> Structures { get; } = new();
-        public Dictionary<string, (string TypeName, List<string> TypeParams, List<(string Ctor, TypeT? Payload)> Ctors)> Adts { get; } = new();
+        public Dictionary<string, (string TypeName, List<TVar> TypeParams, List<(string Ctor, TypeT? Payload)> Ctors)> Adts { get; } = new();
         public Dictionary<string, TypeT?> Exceptions { get; } = new(); // name -> payload type (null for none)
 
         public void LoadDecls(IEnumerable<ModuleDecl> decls)
@@ -58,10 +58,13 @@ namespace AttoML.Core.Modules
                         break;
                     case AttoML.Core.Parsing.TypeDecl td:
                         // Create type parameter mapping for this ADT
+                        var typeParams = new List<TVar>();
                         var typeParamMap = new Dictionary<string, TVar>();
                         foreach (var tpName in td.TypeParams)
                         {
-                            typeParamMap[tpName] = new TVar();
+                            var tvar = new TVar();
+                            typeParams.Add(tvar);
+                            typeParamMap[tpName] = tvar;
                         }
 
                         var ctors = new List<(string, TypeT?)>();
@@ -69,7 +72,7 @@ namespace AttoML.Core.Modules
                         {
                             ctors.Add((c.Name, c.PayloadType == null ? null : TypeFromTypeExpr(c.PayloadType, typeParamMap)));
                         }
-                        Adts[td.Name] = (td.Name, td.TypeParams, ctors);
+                        Adts[td.Name] = (td.Name, typeParams, ctors);
                         break;
                     case ExceptionDecl ed:
                         Exceptions[ed.Name] = ed.PayloadType == null ? null : TypeFromTypeExpr(ed.PayloadType);
@@ -230,15 +233,22 @@ namespace AttoML.Core.Modules
                     }
                 }
             }
-            // Inject ADT constructors
+            // Inject ADT constructors with polymorphic types
             foreach (var adt in Adts.Values)
             {
-                // For now, constructors remain monomorphic (TypeParams not used yet)
-                // Will be updated in Phase 3 to create polymorphic constructors
+                // Build parametric ADT type: option<'a>, either<'a,'b>, etc.
+                var adtType = new TAdt(adt.TypeName, adt.TypeParams);
+
                 foreach (var (ctor, payload) in adt.Ctors)
                 {
-                    TypeT ctorType = payload == null ? new TAdt(adt.TypeName) : new TFun(payload, new TAdt(adt.TypeName));
-                    var scheme = new Scheme(Array.Empty<TVar>(), ctorType);
+                    // Constructor type: payload -> ADT or just ADT
+                    TypeT ctorType = payload == null ? adtType : new TFun(payload, adtType);
+
+                    // Quantify over type parameters to make polymorphic
+                    // e.g., SOME : forall 'a. 'a -> 'a option
+                    //       None : forall 'a. 'a option
+                    var scheme = new Scheme(adt.TypeParams, ctorType);
+
                     e.Add(ctor, scheme);
                 }
             }
