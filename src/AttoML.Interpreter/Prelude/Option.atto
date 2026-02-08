@@ -52,3 +52,20 @@ structure Option = {
           | None -> None)
       | None -> None
 }
+
+(* Example usage with pipe operator (|>):
+
+   (* Chain option operations *)
+   Some 10
+   |> Option.map (fun x -> x * 2)
+   |> Option.filter (fun x -> x > 15)
+   |> Option.map (fun x -> x + 100)
+   (* Result: Some 120 *)
+
+   (* Convert and process *)
+   [42]
+   |> Option.fromList
+   |> Option.map (fun x -> x + 1)
+   |> Option.getOr 0
+   (* Result: 43 *)
+*)

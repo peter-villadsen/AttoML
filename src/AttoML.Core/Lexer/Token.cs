@@ -56,6 +56,7 @@ namespace AttoML.Core.Lexer
         ColonColon, // '::'
         At,    // '@'
         Bar,   // '|'
+        Pipe,  // '|>'
         LessThan, // '<'
         GreaterThan, // '>'
         LessEqual,   // '<='

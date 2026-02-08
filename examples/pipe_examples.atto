@@ -1,0 +1,68 @@
+(* Pipe Operator Examples in AttoML *)
+(* The pipe operator |> allows for elegant function chaining *)
+
+(* Example 1: Basic piping *)
+val example1 =
+    5 |> (fun x -> x + 1) |> (fun x -> x * 2)
+    (* Result: 12 - equivalent to (5 + 1) * 2 *)
+
+(* Example 2: List processing pipeline *)
+val example2 =
+    [1, 2, 3, 4, 5]
+    |> List.map (fun x -> x * 2)
+    |> List.filter (fun x -> x > 5)
+    |> List.foldl (fun acc -> fun x -> acc + x) 0
+    (* Result: 24 - sum of [6, 8, 10] *)
+
+(* Example 3: Option chaining *)
+val example3 =
+    Some 10
+    |> Option.map (fun x -> x * 3)
+    |> Option.filter (fun x -> x > 20)
+    |> Option.map (fun x -> x + 100)
+    |> Option.getOr 0
+    (* Result: 130 *)
+
+(* Example 4: String manipulation *)
+val example4 =
+    "hello"
+    |> (fun s -> s ^ " world")
+    |> (fun s -> s ^ "!")
+    (* Result: "hello world!" *)
+
+(* Example 5: Mathematical pipeline *)
+val example5 =
+    16.0
+    |> Math.sqrt
+    |> (fun x -> x + 1.0)
+    |> (fun x -> x * 2.0)
+    (* Result: 10.0 - (sqrt(16) + 1) * 2 *)
+
+(* Example 6: Partial application with pipes *)
+val addTen = fun x -> x + 10
+val double = fun x -> x * 2
+
+val example6 =
+    5 |> addTen |> double
+    (* Result: 30 *)
+
+(* Example 7: Complex data transformation *)
+datatype 'a result = Ok of 'a | Error of string
+
+fun processValue x =
+    if x > 0 then Ok x else Error "negative"
+
+val example7 =
+    15
+    |> (fun x -> x - 5)
+    |> processValue
+    |> (fun r -> case r of Ok v -> v * 2 | Error _ -> 0)
+    (* Result: 20 *)
+
+(* Example 8: Combining list operations *)
+val example8 =
+    [[1, 2], [3, 4], [5, 6]]
+    |> List.map (fun lst -> List.foldl (fun a -> fun x -> a + x) 0 lst)
+    |> List.filter (fun sum -> sum > 5)
+    |> List.length
+    (* Result: 2 - sums [3, 7, 11], filters to [7, 11], length is 2 *)
