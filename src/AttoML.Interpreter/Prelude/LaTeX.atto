@@ -41,6 +41,49 @@ structure LaTeX = {
   (* Wrap in parentheses *)
   fun paren s = String.concat (String.concat "(" s) ")",
 
+  (* Canonicalize: move constants to the left for readability *)
+  fun canonicalize e =
+    case e of
+      Expr.Const r -> Expr.Const r
+    | Expr.Var v -> Expr.Var v
+    | Expr.Add (a, b) ->
+        let a1 = canonicalize a in
+        let b1 = canonicalize b in
+        (* If b is constant but a is not, swap *)
+        if isNumeric b1 then
+          if isNumeric a1 then Expr.Add (a1, b1)
+          else Expr.Add (b1, a1)
+        else Expr.Add (a1, b1)
+    | Expr.Mul (a, b) ->
+        let a1 = canonicalize a in
+        let b1 = canonicalize b in
+        (* If b is constant but a is not, swap *)
+        if isNumeric b1 then
+          if isNumeric a1 then Expr.Mul (a1, b1)
+          else Expr.Mul (b1, a1)
+        else Expr.Mul (a1, b1)
+    | Expr.Sub (a, b) ->
+        let a1 = canonicalize a in
+        let b1 = canonicalize b in
+        Expr.Sub (a1, b1)
+    | Expr.Div (a, b) ->
+        let a1 = canonicalize a in
+        let b1 = canonicalize b in
+        Expr.Div (a1, b1)
+    | Expr.Pow (a, b) ->
+        let a1 = canonicalize a in
+        let b1 = canonicalize b in
+        Expr.Pow (a1, b1)
+    | Expr.Sin a ->
+        let a1 = canonicalize a in
+        Expr.Sin a1
+    | Expr.Cos a ->
+        let a1 = canonicalize a in
+        Expr.Cos a1
+    | Expr.Log a ->
+        let a1 = canonicalize a in
+        Expr.Log a1,
+
   (* Convert to LaTeX with precedence *)
   fun toLatexP (e, prec) =
     case e of
@@ -83,7 +126,9 @@ structure LaTeX = {
         String.concat (String.concat "\\log(" aStr) ")",
 
   (* Convert to LaTeX string *)
-  fun toLatex e = toLatexP (e, 0),
+  fun toLatex e =
+    let canonical = canonicalize e in
+    toLatexP (canonical, 0),
 
   (* Format expression with optimization *)
   fun formatOptimized (exprStr, maxIters) =

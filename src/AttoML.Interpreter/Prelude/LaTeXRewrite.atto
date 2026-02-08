@@ -112,6 +112,42 @@ structure LaTeXRewrite = {
       EPattern.PMul (EPattern.PPow (pvar "?a", pvar "?n"), EPattern.PPow (pvar "?a", pvar "?m")),
       Template.TPow (tvar "?a", Template.TAdd (tvar "?n", tvar "?m"))),
 
+    (* Power distributes over multiplication: (a*b)^n <-> a^n * b^n *)
+    mkRule ("pow_distrib_mul",
+      EPattern.PPow (EPattern.PMul (pvar "?a", pvar "?b"), pvar "?n"),
+      Template.TMul (Template.TPow (tvar "?a", tvar "?n"), Template.TPow (tvar "?b", tvar "?n"))),
+
+    mkRule ("pow_distrib_mul_rev",
+      EPattern.PMul (EPattern.PPow (pvar "?a", pvar "?n"), EPattern.PPow (pvar "?b", pvar "?n")),
+      Template.TPow (Template.TMul (tvar "?a", tvar "?b"), tvar "?n")),
+
+    (* Power distributes over division: (a/b)^n <-> a^n / b^n *)
+    mkRule ("pow_distrib_div",
+      EPattern.PPow (EPattern.PDiv (pvar "?a", pvar "?b"), pvar "?n"),
+      Template.TDiv (Template.TPow (tvar "?a", tvar "?n"), Template.TPow (tvar "?b", tvar "?n"))),
+
+    mkRule ("pow_distrib_div_rev",
+      EPattern.PDiv (EPattern.PPow (pvar "?a", pvar "?n"), EPattern.PPow (pvar "?b", pvar "?n")),
+      Template.TPow (Template.TDiv (tvar "?a", tvar "?b"), tvar "?n")),
+
+    (* Power of power: (a^m)^n <-> a^(m*n) *)
+    mkRule ("pow_pow",
+      EPattern.PPow (EPattern.PPow (pvar "?a", pvar "?m"), pvar "?n"),
+      Template.TPow (tvar "?a", Template.TMul (tvar "?m", tvar "?n"))),
+
+    mkRule ("pow_pow_rev",
+      EPattern.PPow (pvar "?a", EPattern.PMul (pvar "?m", pvar "?n")),
+      Template.TPow (Template.TPow (tvar "?a", tvar "?m"), tvar "?n")),
+
+    (* Negative exponent: a^(-n) <-> 1/(a^n) *)
+    mkRule ("neg_exp",
+      EPattern.PPow (pvar "?a", EPattern.PNeg (pvar "?n")),
+      Template.TDiv (Template.TConst 1.0, Template.TPow (tvar "?a", tvar "?n"))),
+
+    mkRule ("neg_exp_rev",
+      EPattern.PDiv (EPattern.PConst 1.0, EPattern.PPow (pvar "?a", pvar "?n")),
+      Template.TPow (tvar "?a", Template.TNeg (tvar "?n"))),
+
     (* Trig identity: sin^2(x) + cos^2(x) -> 1 *)
     mkRule ("trig_pythagorean",
       EPattern.PAdd (
@@ -121,11 +157,51 @@ structure LaTeXRewrite = {
       Template.TConst 1.0)
   ],
 
-  (* Optimize expression for LaTeX *)
+  (* Logarithm rules - optional, useful for calculus/differentiation *)
+  fun logarithmRules dummy = [
+    (* Product rule: log(a*b) <-> log(a) + log(b) *)
+    mkRule ("log_product",
+      EPattern.PLog (EPattern.PMul (pvar "?a", pvar "?b")),
+      Template.TAdd (Template.TLog (tvar "?a"), Template.TLog (tvar "?b"))),
+
+    mkRule ("log_product_rev",
+      EPattern.PAdd (EPattern.PLog (pvar "?a"), EPattern.PLog (pvar "?b")),
+      Template.TLog (Template.TMul (tvar "?a", tvar "?b"))),
+
+    (* Quotient rule: log(a/b) <-> log(a) - log(b) *)
+    mkRule ("log_quotient",
+      EPattern.PLog (EPattern.PDiv (pvar "?a", pvar "?b")),
+      Template.TSub (Template.TLog (tvar "?a"), Template.TLog (tvar "?b"))),
+
+    mkRule ("log_quotient_rev",
+      EPattern.PSub (EPattern.PLog (pvar "?a"), EPattern.PLog (pvar "?b")),
+      Template.TLog (Template.TDiv (tvar "?a", tvar "?b"))),
+
+    (* Power rule: log(a^n) <-> n * log(a) *)
+    mkRule ("log_power",
+      EPattern.PLog (EPattern.PPow (pvar "?a", pvar "?n")),
+      Template.TMul (tvar "?n", Template.TLog (tvar "?a"))),
+
+    mkRule ("log_power_rev",
+      EPattern.PMul (pvar "?n", EPattern.PLog (pvar "?a")),
+      Template.TLog (Template.TPow (tvar "?a", tvar "?n")))
+  ],
+
+  (* Optimize expression for LaTeX with standard algebraic rules *)
   fun optimizeForLatex (expr, maxIters) =
     let eg0 = EGraph.empty 0 in
     let (rootId, eg1) = EGraph.add (eg0, expr) in
     let rules = algebraicRules 0 in
+    let eg2 = EGraph.saturate (eg1, rules, maxIters) in
+    EGraph.extract (eg2, latexCost, rootId),
+
+  (* Optimize with logarithm rules included (for calculus contexts) *)
+  fun optimizeForCalculus (expr, maxIters) =
+    let eg0 = EGraph.empty 0 in
+    let (rootId, eg1) = EGraph.add (eg0, expr) in
+    let algRules = algebraicRules 0 in
+    let logRules = logarithmRules 0 in
+    let rules = algRules @ logRules in
     let eg2 = EGraph.saturate (eg1, rules, maxIters) in
     EGraph.extract (eg2, latexCost, rootId)
 }
