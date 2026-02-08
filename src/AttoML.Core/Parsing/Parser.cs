@@ -453,6 +453,15 @@ namespace AttoML.Core.Parsing
                     expr = new App(new App(q, expr), right);
                     continue;
                 }
+                // Pipe operator: x |> f becomes f x
+                // Use ParseNoRelational to stop before consuming another pipe
+                if (Kind == TokenKind.Pipe)
+                {
+                    Next();
+                    var right = ParseNoRelational();
+                    expr = new App(right, expr);
+                    continue;
+                }
                 if (Kind == TokenKind.Handle)
                 {
                     Next();
@@ -487,8 +496,8 @@ namespace AttoML.Core.Parsing
                 {
                     break;
                 }
-                // Stop on relational/equality and short-circuit tokens to let outer caller handle precedence
-                if (Kind == TokenKind.Equals || Kind == TokenKind.NotEqual || Kind == TokenKind.EqEq || Kind == TokenKind.BangEq || Kind == TokenKind.LessThan || Kind == TokenKind.GreaterThan || Kind == TokenKind.LessEqual || Kind == TokenKind.GreaterEqual || Kind == TokenKind.AndThen || Kind == TokenKind.OrElse)
+                // Stop on pipe, relational/equality and short-circuit tokens to let outer caller handle precedence
+                if (Kind == TokenKind.Pipe || Kind == TokenKind.Equals || Kind == TokenKind.NotEqual || Kind == TokenKind.EqEq || Kind == TokenKind.BangEq || Kind == TokenKind.LessThan || Kind == TokenKind.GreaterThan || Kind == TokenKind.LessEqual || Kind == TokenKind.GreaterEqual || Kind == TokenKind.AndThen || Kind == TokenKind.OrElse)
                 {
                     break;
                 }

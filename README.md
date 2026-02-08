@@ -2,8 +2,9 @@
 
 AttoML is a small ML-like language implemented in C#. It has a shared frontend (lexer, parser, AST, Hindley–Milner type inference) used by an interpreter today, with a future compiler planned.
 
-## What's New: Parametric Polymorphism! 🎉
+## What's New! 🎉
 
+### Parametric Polymorphism
 AttoML now supports **parametric types** for algebraic data types! Define generic types that work with any type parameter:
 
 ```ml
@@ -20,6 +21,23 @@ Right "error"    (* ('a, string) either *)
 ```
 
 **Benefits**: Type-safe generics, zero code duplication, full type inference, no runtime overhead.
+
+### Pipe Operator
+The **pipe operator `|>`** enables elegant function chaining, making code more readable and eliminating nested parentheses:
+
+```ml
+(* Before: nested functions *)
+List.foldl (fun a -> fun x -> a + x) 0 (List.filter (fun x -> x > 5) (List.map (fun x -> x * 2) [1, 2, 3, 4, 5]))
+
+(* After: clean pipeline *)
+[1, 2, 3, 4, 5]
+|> List.map (fun x -> x * 2)
+|> List.filter (fun x -> x > 5)
+|> List.foldl (fun a -> fun x -> a + x) 0
+(* Result: 24 *)
+```
+
+**Benefits**: Left-to-right data flow, better readability, F#-style function composition.
 
 ## Features
 
@@ -179,7 +197,8 @@ The `end` keyword is optional for simple cases but recommended for clarity in ne
 - **Relational**: `<`, `>`, `<=`, `>=` (polymorphic)
 - **Equality**: `=` (structural), `<>` (inequality)
 - **Boolean**: `andthen`/`andalso` (short-circuit AND), `orelse` (short-circuit OR)
-- **List**: `@` (concatenation), `::` (cons in patterns)
+- **List**: `@` (concatenation), `::` (cons in patterns and expressions)
+- **Pipe**: `|>` (forward application for function chaining)
 
 ### Modules
 - **Structures**: `structure Name = { val x = 1, fun f x = x + 1 }`
@@ -299,6 +318,35 @@ val it : float = 0.46211715726001
 
 >> let x = 2.0 in (Math.cosh x * Math.cosh x) - (Math.sinh x * Math.sinh x)
 val it : float = 1
+```
+
+### Pipe Operator Examples
+```
+>> (* Simple chaining *)
+>> 5 |> (fun x -> x + 1) |> (fun x -> x * 2)
+val it : int = 12
+
+>> (* List processing pipeline *)
+>> [1, 2, 3, 4, 5]
+   |> List.map (fun x -> x * 2)
+   |> List.filter (fun x -> x > 5)
+val it : [int] = [6, 8, 10]
+
+>> (* Option chaining *)
+>> Some 10
+   |> Option.map (fun x -> x * 3)
+   |> Option.filter (fun x -> x > 20)
+   |> Option.getOr 0
+val it : int = 30
+
+>> (* Math pipeline *)
+>> 16.0 |> Math.sqrt |> (fun x -> x + 1.0)
+val it : float = 5
+
+>> (* Partial application *)
+>> let add x y = x + y in
+   5 |> add 10
+val it : int = 15
 ```
 
 ### Lists and Pattern Matching

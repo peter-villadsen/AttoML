@@ -193,6 +193,11 @@ namespace AttoML.Core.Lexer
                     return new Token(TokenKind.GreaterThan, ">", start);
                 case '|':
                     Advance();
+                    if (!IsEOF && Peek() == '>')
+                    {
+                        Advance();
+                        return new Token(TokenKind.Pipe, "|>", start);
+                    }
                     return new Token(TokenKind.Bar, "|", start);
                 case '\'':
                     Advance();
