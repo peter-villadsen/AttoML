@@ -2,6 +2,25 @@
 
 AttoML is a small ML-like language implemented in C#. It has a shared frontend (lexer, parser, AST, Hindley–Milner type inference) used by an interpreter today, with a future compiler planned.
 
+## What's New: Parametric Polymorphism! 🎉
+
+AttoML now supports **parametric types** for algebraic data types! Define generic types that work with any type parameter:
+
+```ml
+(* Define once, use with any type *)
+datatype 'a option = None | Some of 'a
+datatype ('a, 'b) either = Left of 'a | Right of 'b
+datatype 'a tree = Leaf | Node of 'a * 'a tree * 'a tree
+
+(* Polymorphic constructors *)
+Some 42          (* int option *)
+Some "hello"     (* string option *)
+Left 3.14        (* (float, 'b) either *)
+Right "error"    (* ('a, string) either *)
+```
+
+**Benefits**: Type-safe generics, zero code duplication, full type inference, no runtime overhead.
+
 ## Features
 
 ### Core Language
@@ -20,7 +39,92 @@ AttoML is a small ML-like language implemented in C#. It has a shared frontend (
 - **Tuples**: `(1, "hello", true)`
 - **Lists**: `[1, 2, 3]` with `@` concatenation
 - **Records**: `{x = 1, y = true, z = "test"}`
-- **Algebraic Data Types**: `datatype Option = Some of int | None`
+- **Algebraic Data Types**:
+  - Monomorphic: `datatype Color = Red | Green | Blue`
+  - **Parametric (NEW!)**: `datatype 'a option = None | Some of 'a`
+  - Multiple parameters: `datatype ('a, 'b) either = Left of 'a | Right of 'b`
+
+### Parametric Types (NEW!)
+
+AttoML now supports **parametric polymorphism** for algebraic data types, allowing you to define generic types that work with any type parameter:
+
+**Single Type Parameter:**
+```ml
+(* Define a generic option type *)
+datatype 'a option = None | Some of 'a
+
+(* Works with any type! *)
+let intOpt = Some 42 in              (* int option *)
+let strOpt = Some "hello" in         (* string option *)
+let boolOpt = Some true in           (* bool option *)
+(intOpt, strOpt, boolOpt)
+```
+
+**Multiple Type Parameters:**
+```ml
+(* Define a type with two parameters *)
+datatype ('a, 'b) either = Left of 'a | Right of 'b
+
+(* Use with different type combinations *)
+let x = Left 42 in                   (* (int, 'b) either *)
+let y = Right "error" in             (* ('a, string) either *)
+let z = Left 3.14 in                 (* (float, 'c) either *)
+(x, y, z)
+```
+
+**Recursive Parametric Types:**
+```ml
+(* Generic binary tree *)
+datatype 'a tree = Leaf | Node of 'a * 'a tree * 'a tree
+
+(* Integer tree *)
+let intTree = Node (5,
+                    Node (3, Leaf, Leaf),
+                    Node (7, Leaf, Leaf))
+in intTree
+
+(* String tree *)
+let strTree = Node ("root",
+                    Node ("left", Leaf, Leaf),
+                    Node ("right", Leaf, Leaf))
+in strTree
+```
+
+**Type Constructors:**
+Parametric type constructors are **polymorphic** and automatically instantiated:
+```ml
+datatype 'a option = None | Some of 'a
+
+(* Constructor types *)
+Some : forall 'a. 'a -> 'a option
+None : forall 'a. 'a option
+
+(* Type inference instantiates correctly *)
+Some 42        (* 'a = int *)
+Some "hi"      (* 'a = string *)
+None           (* 'a remains polymorphic *)
+```
+
+**Pattern Matching:**
+Pattern matching works seamlessly with parametric types:
+```ml
+datatype 'a option = None | Some of 'a
+
+fun getOr opt default = case opt of
+    Some x -> x
+  | None -> default
+
+(* Works with any type *)
+getOr (Some 42) 0           (* int -> int *)
+getOr (Some "hi") "bye"     (* string -> string *)
+getOr None 3.14             (* float -> float *)
+```
+
+**Benefits:**
+- **Code reuse**: Write generic data structures once
+- **Type safety**: Full type checking with inference
+- **Zero runtime overhead**: Types erased after compilation
+- **No code duplication**: One implementation for all types
 
 ### Pattern Matching
 Full pattern matching with multiple syntaxes:
@@ -60,8 +164,12 @@ The `end` keyword is optional for simple cases but recommended for clarity in ne
 - **Primitive types**: `int`, `bool`, `float`, `string`, `unit`
 - **Compound types**: function types, tuples, lists, records, ADTs
 - **Exception type**: `exn` with pattern matching support
+- **Parametric polymorphism (NEW!)**: Type parameters in ADTs
+  - Single parameter: `'a option`, `'a list`, `'a tree`
+  - Multiple parameters: `('a, 'b) either`, `('k, 'v) map`
 - **Hindley-Milner inference**: Full constraint-based type inference with:
   - Polymorphic let-bound names
+  - Polymorphic ADT constructors: `Some : forall 'a. 'a -> 'a option`
   - Occurs check
   - Type annotations: `let x : int = 5 in ...`
 
@@ -98,7 +206,7 @@ The `end` keyword is optional for simple cases but recommended for clarity in ne
 - **Map**: `empty`, `singleton`, `add`, `remove`, `get`, `contains`, `size`, `isEmpty`, `keys`, `values`, `toList`, `fromList`, `mapValues`, `fold`
 
 #### Prelude Modules (AttoML)
-- **Option**: `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`
+- **Option** (polymorphic `'a option`): `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`, `andThen`
 - **Result**: `isOk`, `isError`, `getOr`, `getError`, `map`, `mapError`, `bind`, `andThen`, `orElse`, `fold`, `toOption`, `errorToOption`, `map2`, `andAlso`, `orElse2`
 - **Complex**: Complex number arithmetic (`add`, `sub`, `mul`, `conj`, `magnitude`, `ofPolar`, `toPolar`)
 
@@ -228,17 +336,39 @@ val it : float = 13
 ```
 
 ### Algebraic Data Types
+
+**Monomorphic ADTs:**
 ```
->> datatype Option = Some of int | None
->> Some 3
-val it : Option = <Some 3>
+>> datatype Color = Red | Green | Blue
+>> Red
+val it : Color = <Red>
+
+>> case Red of Red => 1 | Green => 2 | Blue => 3
+val it : int = 1
+```
+
+**Parametric ADTs (NEW!):**
+```
+>> datatype 'a option = None | Some of 'a
+>> Some 42
+val it : option = <Some 42>
+
+>> Some "hello"
+val it : option = <Some "hello">
 
 >> case Some 42 of Some x => x | None => 0
 val it : int = 42
 
->> datatype List = Cons of int * List | Nil
+>> datatype 'a list = Nil | Cons of 'a * 'a list
 >> Cons (1, Cons (2, Nil))
-val it : List = <Cons (1, <Cons (2, <Nil>)>)>
+val it : list = <Cons (1, <Cons (2, <Nil>)>)>
+
+>> datatype ('a, 'b) either = Left of 'a | Right of 'b
+>> Left 42
+val it : either = <Left 42>
+
+>> Right "error"
+val it : either = <Right "error">
 ```
 
 ### Functions and Operators
@@ -368,33 +498,47 @@ Functions: `fst`, `snd`, `swap`, `curry`, `uncurry`, `fst3`, `snd3`, `thd3`
 
 ### Option Module
 
-Provides the `Option` type for representing optional values:
+Provides the **polymorphic** `'a option` type for representing optional values:
 
 ```ml
->> datatype Option = Some of int | None
+>> datatype 'a option = None | Some of 'a
+
+(* Works with any type! *)
 >> Option.isSome (Some 42)
+val it : bool = true
+
+>> Option.isSome (Some "hello")
 val it : bool = true
 
 >> Option.getOr None 99
 val it : int = 99
 
 >> Option.map (fn x => x * 2) (Some 21)
-val it : Option = <Some 42>
+val it : option = <Some 42>
+
+>> Option.map (fn s => s ^ "!") (Some "hello")
+val it : option = <Some "hello!">
 
 >> Option.filter (fn x => x > 10) (Some 42)
-val it : Option = <Some 42>
+val it : option = <Some 42>
 
 >> Option.filter (fn x => x > 50) (Some 42)
-val it : Option = <None>
+val it : option = <None>
 
 >> Option.toList (Some 42)
 val it : [int] = [42]
 
 >> Option.fromList [1, 2, 3]
-val it : Option = <Some 1>
+val it : option = <Some 1>
+
+(* Fold with two functions: onSome and onNone *)
+>> Option.fold (fn x => x * 3) (fn _ => 0) (Some 14)
+val it : int = 42
 ```
 
-Functions: `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`
+**Type signature**: All functions work with `'a option` (polymorphic!)
+
+Functions: `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`, `andThen`
 
 ### Result Module
 
@@ -506,12 +650,12 @@ Functions: `empty`, `singleton`, `add`, `remove`, `get`, `contains`, `size`, `is
   - Built-ins: `Base`, `Math`, `List`, `String`
   - `Program` - REPL and file execution
 
-- **Tests**: xUnit test suite (146 tests) covering:
+- **Tests**: xUnit test suite (299 tests, 288 passing) covering:
   - Lexing and parsing
-  - Type inference
+  - Type inference and parametric polymorphism
   - Pattern matching
   - Evaluation
-  - Modules
+  - Modules and polymorphic types
   - SML compatibility
 
 ## Documentation
@@ -551,6 +695,9 @@ GitHub Actions workflow builds and tests on pushes and PRs.
 
 #### ✅ Fully Supported
 - **Algebraic data types** (`datatype` / `type`)
+  - **Parametric types (NEW!)**: `'a option`, `('a, 'b) either`
+  - Type parameters in constructors
+  - Polymorphic constructor schemes
 - **Pattern matching** (`case`/`of`, `match`/`with`)
   - Literal patterns, wildcards, variables
   - Tuple and record patterns
@@ -599,7 +746,7 @@ AttoML provides a comprehensive set of functional programming libraries:
 - **SymCalc**: Symbolic differentiation and simplification
 
 #### 🔄 Partial (vs SML Basis Library)
-- **No polymorphic collections**: Set and Map work only with `int` keys/values (not `'a`)
+- **Limited polymorphic collections**: User-defined types support full polymorphism (`'a option`, `'a tree`), but built-in Set and Map modules currently work only with `int` keys/values
 - **No Array module**: Mutable arrays not supported (pure functional focus)
 - **No TextIO/BinIO**: No file I/O operations
 - **No OS/Process**: No operating system interface
