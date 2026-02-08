@@ -57,10 +57,17 @@ namespace AttoML.Core.Modules
                         Structures[st.Name] = new StructureInfo(st.Name, ord, st.SigName);
                         break;
                     case AttoML.Core.Parsing.TypeDecl td:
+                        // Create type parameter mapping for this ADT
+                        var typeParamMap = new Dictionary<string, TVar>();
+                        foreach (var tpName in td.TypeParams)
+                        {
+                            typeParamMap[tpName] = new TVar();
+                        }
+
                         var ctors = new List<(string, TypeT?)>();
                         foreach (var c in td.Ctors)
                         {
-                            ctors.Add((c.Name, c.PayloadType == null ? null : TypeFromTypeExpr(c.PayloadType)));
+                            ctors.Add((c.Name, c.PayloadType == null ? null : TypeFromTypeExpr(c.PayloadType, typeParamMap)));
                         }
                         Adts[td.Name] = (td.Name, td.TypeParams, ctors);
                         break;
@@ -266,7 +273,7 @@ namespace AttoML.Core.Modules
             return e;
         }
 
-        public static TypeT TypeFromTypeExpr(TypeExpr te)
+        public static TypeT TypeFromTypeExpr(TypeExpr te, Dictionary<string, TVar>? typeParamMap = null)
         {
             return te switch
             {
@@ -281,11 +288,14 @@ namespace AttoML.Core.Modules
                     // Treat any other name as an ADT reference (supports recursive payloads like Expr)
                     _ => new TAdt(tn.Name)
                 },
-                TypeArrow ta => new TFun(TypeFromTypeExpr(ta.From), TypeFromTypeExpr(ta.To)),
-                TypeTuple tt => new TTuple(tt.Items.Select(TypeFromTypeExpr).ToList()),
+                TypeVar tv => typeParamMap != null && typeParamMap.TryGetValue(tv.Name, out var tvar)
+                    ? tvar
+                    : throw new Exception($"Unbound type variable '{tv.Name}"),
+                TypeArrow ta => new TFun(TypeFromTypeExpr(ta.From, typeParamMap), TypeFromTypeExpr(ta.To, typeParamMap)),
+                TypeTuple tt => new TTuple(tt.Items.Select(t => TypeFromTypeExpr(t, typeParamMap)).ToList()),
                 TypeApp tapp => tapp.Constructor switch
                 {
-                    "list" => new TList(TypeFromTypeExpr(tapp.Base)),
+                    "list" => new TList(TypeFromTypeExpr(tapp.Base, typeParamMap)),
                     _ => throw new Exception($"Unknown type constructor: {tapp.Constructor}")
                 },
                 _ => throw new Exception("Unknown type expr")

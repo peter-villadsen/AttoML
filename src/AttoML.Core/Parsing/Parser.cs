@@ -987,6 +987,26 @@ namespace AttoML.Core.Parsing
         private TypeDecl ParseTypeDecl()
         {
             Expect(TokenKind.Type);
+
+            // Parse optional type parameters: 'a or ('a, 'b)
+            var typeParams = new List<string>();
+            if (Kind == TokenKind.Quote)  // Single param: 'a option
+            {
+                Next();  // consume '
+                typeParams.Add(Expect(TokenKind.Identifier).Text);
+            }
+            else if (Kind == TokenKind.LParen && Peek(1).Kind == TokenKind.Quote)  // Multiple params: ('a, 'b) either
+            {
+                Next();  // consume (
+                while (true)
+                {
+                    Expect(TokenKind.Quote);  // '
+                    typeParams.Add(Expect(TokenKind.Identifier).Text);
+                    if (!Match(TokenKind.Comma)) break;
+                }
+                Expect(TokenKind.RParen);
+            }
+
             var name = Expect(TokenKind.Identifier).Text;
             Expect(TokenKind.Equals);
             var ctors = new List<TypeCtorDecl>();
@@ -1008,7 +1028,7 @@ namespace AttoML.Core.Parsing
                     break;
                 }
             }
-            return new TypeDecl(name, new List<string>(), ctors);
+            return new TypeDecl(name, typeParams, ctors);
         }
 
         private ExceptionDecl ParseExceptionDecl()
@@ -1059,6 +1079,12 @@ namespace AttoML.Core.Parsing
                 Expect(TokenKind.RParen);
                 if (items.Count == 1) baseType = items[0];
                 else baseType = new TypeTuple(items);
+            }
+            else if (Match(TokenKind.Quote))
+            {
+                // Type variable: 'a, 'b, etc.
+                var id = Expect(TokenKind.Identifier).Text;
+                baseType = new TypeVar(id);
             }
             else
             {

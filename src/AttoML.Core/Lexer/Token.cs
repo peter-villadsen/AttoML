@@ -63,6 +63,7 @@ namespace AttoML.Core.Lexer
         AndThen, // keyword 'andthen'
         OrElse,  // keyword 'orelse'
         Caret,   // '^'
+        Quote,   // '\'' for type variables
     }
 
     public readonly struct Token

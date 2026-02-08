@@ -194,6 +194,9 @@ namespace AttoML.Core.Lexer
                 case '|':
                     Advance();
                     return new Token(TokenKind.Bar, "|", start);
+                case '\'':
+                    Advance();
+                    return new Token(TokenKind.Quote, "'", start);
                 case '-':
                     if (Peek2() == '>')
                     {
