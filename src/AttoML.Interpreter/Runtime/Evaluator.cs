@@ -171,7 +171,25 @@ namespace AttoML.Interpreter
                         }
                         return new RecordVal(dict);
                     }
+                case RecordAccess ra:
+                    {
+                        var recVal = Eval(ra.Record, env);
+                        if (recVal is not RecordVal rv)
+                            throw new Exception($"Cannot access field '{ra.Field}' of non-record value");
+                        if (!rv.Fields.TryGetValue(ra.Field, out var fieldVal))
+                            throw new Exception($"Record does not have field '{ra.Field}'");
+                        return fieldVal;
+                    }
                 case Qualify q:
+                    // Check if this is record field access
+                    if (env.TryGet(q.Module, out var recValQual) && recValQual is RecordVal rvQual)
+                    {
+                        // This is record access, not module qualification
+                        if (!rvQual.Fields.TryGetValue(q.Name, out var fieldValQual))
+                            throw new Exception($"Record does not have field '{q.Name}'");
+                        return fieldValQual;
+                    }
+                    // Otherwise treat as qualified module name
                     var qname = $"{q.Module}.{q.Name}";
                     if (!env.TryGet(qname, out var qv))
                     {

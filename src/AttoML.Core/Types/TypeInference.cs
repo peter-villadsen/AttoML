@@ -122,19 +122,60 @@ namespace AttoML.Core.Types
                         fields[name] = ft;
                     }
                     return new TRecord(fields);
+                case RecordAccess ra:
+                    var recT = InferExpr(env, ra.Record, subst);
+                    if (recT is not TRecord trec)
+                        throw new Exception($"Cannot access field '{ra.Field}' of non-record type {recT}");
+                    if (!trec.Fields.TryGetValue(ra.Field, out var fieldType))
+                        throw new Exception($"Record does not have field '{ra.Field}'");
+                    return fieldType;
                 case Qualify q:
-                    // Qualified names are treated as Var("Module.Name") in type env
+                    // Check if this is actually record field access
+                    // If q.Module is a variable with record type, treat as record access
+                    if (env.TryGet(q.Module, out var varSch))
+                    {
+                        var varType = Instantiate(varSch);
+                        if (varType is TRecord trecQual)
+                        {
+                            // This is record access, not module qualification
+                            if (!trecQual.Fields.TryGetValue(q.Name, out var fieldTypeQual))
+                                throw new Exception($"Record does not have field '{q.Name}'");
+                            return fieldTypeQual;
+                        }
+                    }
+                    // Otherwise treat as qualified module name
                     var qn = $"{q.Module}.{q.Name}";
                     if (!env.TryGet(qn, out var sch2))
                         throw new Exception($"Unbound qualified name '{qn}'");
                     return Instantiate(sch2);
                 case Match m:
                     var tScrutinee = InferExpr(env, m.Scrutinee, subst);
+                    // string scrutExpr = m.Scrutinee is Var vv ? vv.Name : m.Scrutinee.GetType().Name;
+                    // Console.WriteLine($"[MATCH DEBUG] Match on '{scrutExpr}' ({m.Cases.Count} cases): Initial scrutinee type: {tScrutinee}");
                     Type? tResult = null;
+                    int caseNum = 0;
                     foreach (var (pat, branch) in m.Cases)
                     {
                         var envCase = env.Clone();
-                        InferPattern(envCase, subst, tScrutinee, pat);
+                        // CRITICAL FIX: Apply current substitution to scrutinee type before pattern matching
+                        // As we process cases, subst gets updated, so we need the current view of the scrutinee type
+                        var currentScrutineeType = subst.Apply(tScrutinee);
+                        // Console.WriteLine($"[MATCH DEBUG] Case #{caseNum}: scrutinee type after subst.Apply = {currentScrutineeType}");
+                        // if (tScrutinee.ToString() != currentScrutineeType.ToString())
+                        // {
+                        //     Console.WriteLine($"[MATCH DEBUG]   Scrutinee type CHANGED from {tScrutinee} to {currentScrutineeType}");
+                        // }
+                        try
+                        {
+                            InferPattern(envCase, subst, currentScrutineeType, pat);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Console.WriteLine($"[TYPE DEBUG] Error in InferPattern for case #{caseNum}:");
+                            // Console.WriteLine($"  Scrutinee type: {currentScrutineeType}");
+                            // Console.WriteLine($"  Pattern: {pat}");
+                            throw;
+                        }
                         var bt = InferExpr(envCase, branch, subst);
                         if (tResult == null)
                         {
@@ -146,6 +187,7 @@ namespace AttoML.Core.Types
                             subst.Compose(sm);
                             tResult = subst.Apply(tResult);
                         }
+                        caseNum++;
                     }
                     if (tResult == null) throw new Exception("match must have at least one case");
                     return subst.Apply(tResult);
@@ -191,7 +233,8 @@ namespace AttoML.Core.Types
                     var tv = FreshVar();
                     var s = Unify(scrutineeType, tv);
                     subst.Compose(s);
-                    env.Add(pv.Name, new Scheme(Array.Empty<TVar>(), subst.Apply(tv)));
+                    var finalType = subst.Apply(tv);
+                    env.Add(pv.Name, new Scheme(Array.Empty<TVar>(), finalType));
                     return;
                 case PInt pi:
                     subst.Compose(Unify(scrutineeType, TConst.Int));
@@ -209,12 +252,26 @@ namespace AttoML.Core.Types
                     subst.Compose(Unify(scrutineeType, TConst.Unit));
                     return;
                 case PTuple pt:
+                    // First, if scrutinee is already a concrete tuple type, use it directly
+                    // This avoids creating fresh variables that might get corrupted later
+                    if (scrutineeType is TTuple tt && tt.Items.Count == pt.Items.Count)
+                    {
+                        // Scrutinee is already a tuple with the right arity - use its element types directly
+                        for (int i = 0; i < pt.Items.Count; i++)
+                        {
+                            InferPattern(env, subst, tt.Items[i], pt.Items[i]);
+                        }
+                        return;
+                    }
+
+                    // Otherwise, create fresh variables and unify
                     var elemTypes = pt.Items.Select(_ => (Type)FreshVar()).ToList();
                     var s0 = Unify(scrutineeType, new TTuple(elemTypes));
                     subst.Compose(s0);
                     for (int i = 0; i < pt.Items.Count; i++)
                     {
-                        InferPattern(env, subst, subst.Apply(elemTypes[i]), pt.Items[i]);
+                        var appliedType = subst.Apply(elemTypes[i]);
+                        InferPattern(env, subst, appliedType, pt.Items[i]);
                     }
                     return;
                 case PCtor pc:

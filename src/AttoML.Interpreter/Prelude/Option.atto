@@ -1,62 +1,95 @@
-(* Option Module - Standard option type and operations *)
+(* Option Module - Option types for common types *)
 
-datatype Option = Some of int | None
+(* Predefined option types *)
+datatype OptionInt = SomeInt of int | NoneInt
+datatype OptionFloat = SomeFloat of float | NoneFloat
+datatype OptionString = SomeString of string | NoneString
+datatype OptionBool = SomeBool of bool | NoneBool
 
-structure Option = {
-    (* Type checks *)
+structure OptionInt = {
     fun isSome opt = case opt of
-        Some _ -> true
-      | None -> false,
+        SomeInt _ -> true
+      | NoneInt -> false,
 
     fun isNone opt = case opt of
-        Some _ -> false
-      | None -> true,
+        SomeInt _ -> false
+      | NoneInt -> true,
 
-    (* Get value with default *)
     fun getOr opt default = case opt of
-        Some x -> x
-      | None -> default,
+        SomeInt x -> x
+      | NoneInt -> default,
 
-    (* Map over option *)
     fun map f opt = case opt of
-        Some x -> Some (f x)
-      | None -> None,
+        SomeInt x -> SomeInt (f x)
+      | NoneInt -> NoneInt,
 
-    (* Bind/flatMap for option *)
     fun bind f opt = case opt of
-        Some x -> f x
-      | None -> None,
+        SomeInt x -> f x
+      | NoneInt -> NoneInt,
 
-    (* Filter option by predicate *)
-    fun filter pred opt = case opt of
-        Some x -> if pred x then Some x else None
-      | None -> None,
-
-    (* Fold over option *)
-    fun fold onSome onNone opt = case opt of
-        Some x -> onSome x
-      | None -> onNone (),
-
-    (* Convert option to list *)
     fun toList opt = case opt of
-        Some x -> [x]
-      | None -> [],
+        SomeInt x -> [x]
+      | NoneInt -> [],
 
-    (* Convert list to option (head if non-empty) *)
     fun fromList lst = case lst of
-        h::_ -> Some h
-      | [] -> None,
+        h::_ -> SomeInt h
+      | [] -> NoneInt
+}
 
-    (* Combine two options with a function *)
-    fun map2 f opt1 opt2 =
-        case opt1 of
-            Some x -> (case opt2 of
-                Some y -> Some (f x y)
-              | None -> None)
-          | None -> None,
+structure OptionFloat = {
+    fun isSome opt = case opt of
+        SomeFloat _ -> true
+      | NoneFloat -> false,
 
-    (* Return first Some, or None if both None *)
-    fun orElse opt1 opt2 = case opt1 of
-        Some _ -> opt1
-      | None -> opt2
+    fun getOr opt default = case opt of
+        SomeFloat x -> x
+      | NoneFloat -> default,
+
+    fun map f opt = case opt of
+        SomeFloat x -> SomeFloat (f x)
+      | NoneFloat -> NoneFloat,
+
+    fun bind f opt = case opt of
+        SomeFloat x -> f x
+      | NoneFloat -> NoneFloat,
+
+    fun toList opt = case opt of
+        SomeFloat x -> [x]
+      | NoneFloat -> []
+}
+
+structure OptionString = {
+    fun isSome opt = case opt of
+        SomeString _ -> true
+      | NoneString -> false,
+
+    fun getOr opt default = case opt of
+        SomeString x -> x
+      | NoneString -> default,
+
+    fun map f opt = case opt of
+        SomeString x -> SomeString (f x)
+      | NoneString -> NoneString,
+
+    fun bind f opt = case opt of
+        SomeString x -> f x
+      | NoneString -> NoneString,
+
+    fun toList opt = case opt of
+        SomeString x -> [x]
+      | NoneString -> []
+}
+
+structure OptionBool = {
+    fun isSome opt = case opt of
+        SomeBool _ -> true
+      | NoneBool -> false,
+
+    fun getOr opt default = case opt of
+        SomeBool x -> x
+      | NoneBool -> default,
+
+    fun toList opt = case opt of
+        SomeBool x -> [x]
+      | NoneBool -> []
 }

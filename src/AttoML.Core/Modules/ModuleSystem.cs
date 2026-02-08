@@ -121,12 +121,78 @@ namespace AttoML.Core.Modules
                 // Second pass: infer each binding with stubs available
                 foreach (var (bn, bexpr, bann) in s.OrderedBindings)
                 {
-                    // Support self-recursive function bindings by desugaring to LetRec during inference
-                    AttoML.Core.Parsing.Expr inferExpr = bexpr;
-                    if (bexpr is AttoML.Core.Parsing.Fun f)
+                    // Don't convert to LetRec - the stubbing mechanism already enables mutual recursion!
+                    // Converting to LetRec shadows the stub with a fresh var, breaking mutual recursion.
+
+                    // If there's an annotation and it's a Fun, we need special handling:
+                    // Manually infer with parameter type from annotation to avoid Fun case creating fresh vars
+                    if (bann != null && bexpr is AttoML.Core.Parsing.Fun f)
                     {
-                        inferExpr = new AttoML.Core.Parsing.LetRec(bn, f.Param, bann, f.Body, new AttoML.Core.Parsing.Var(bn));
+                        var annTy = TypeFromTypeExpr(bann);
+                        // Update stub with annotation so recursive calls work correctly
+                        eLocal.Add(bn, new Scheme(Array.Empty<TVar>(), annTy));
+
+                        // Extract parameter type from annotation
+                        if (annTy is TFun tf)
+                        {
+                            // DEBUG: Print annotation structure
+                            if (tf.From is TTuple tt)
+                            {
+                                for (int i = 0; i < tt.Items.Count; i++)
+                                {
+                                }
+                            }
+
+                            // Infer the function body directly, bypassing the Fun case in TypeInference
+                            // This ensures the parameter gets the annotated type, not a fresh var
+                            var envWithParam = eLocal.Clone();
+                            // Add parameter with the type from annotation - this is key!
+                            envWithParam.Add(f.Param, new Scheme(Array.Empty<TVar>(), tf.From));
+
+                            Types.Subst substFun;
+                            TypeT bodyTy;
+                            try
+                            {
+                                foreach (var name in envWithParam.Names)
+                                {
+                                    if (envWithParam.TryGet(name, out var schemeDebug))
+                                    {
+                                    }
+                                }
+
+                                // Infer the function body with parameter type constrained
+                                (substFun, bodyTy) = ti.Infer(envWithParam, f.Body);
+
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception($"Error inferring binding {s.Name}.{bn}: {ex.Message}");
+                            }
+
+                            // Verify body type matches annotation's return type
+                            try
+                            {
+                                ti.AssertUnify(substFun.Apply(bodyTy), substFun.Apply(tf.To));
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception($"Function body type {substFun.Apply(bodyTy)} doesn't match annotated return type {tf.To}: {ex.Message}");
+                            }
+
+                            // Use the annotation as the final type
+                            var tyFun = annTy;
+                            var schemeFun = new Scheme(Array.Empty<TVar>(), tyFun);
+                            e.Add($"{s.Name}.{bn}", schemeFun);
+                            eLocal.Add(bn, schemeFun);
+                            if (opened.Contains(s.Name))
+                            {
+                                e.Add(bn, schemeFun);
+                            }
+                            continue;  // Skip normal inference path
+                        }
                     }
+
+                    AttoML.Core.Parsing.Expr inferExpr = bexpr;
                     Types.Subst subst;
                     TypeT t;
                     try
@@ -215,6 +281,11 @@ namespace AttoML.Core.Modules
                 },
                 TypeArrow ta => new TFun(TypeFromTypeExpr(ta.From), TypeFromTypeExpr(ta.To)),
                 TypeTuple tt => new TTuple(tt.Items.Select(TypeFromTypeExpr).ToList()),
+                TypeApp tapp => tapp.Constructor switch
+                {
+                    "list" => new TList(TypeFromTypeExpr(tapp.Base)),
+                    _ => throw new Exception($"Unknown type constructor: {tapp.Constructor}")
+                },
                 _ => throw new Exception("Unknown type expr")
             };
         }

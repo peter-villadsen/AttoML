@@ -23,7 +23,12 @@ AttoML is a small ML-like language implemented in C#. It has a shared frontend (
 - **Algebraic Data Types**: `datatype Option = Some of int | None`
 
 ### Pattern Matching
-Full pattern matching with `match expr with` or `case expr of` (SML-style):
+Full pattern matching with multiple syntaxes:
+- **OCaml-style**: `match expr with ... end` (explicit end terminator for nested matches)
+- **OCaml-style (short)**: `match expr with ...` (end keyword optional)
+- **SML-style**: `case expr of ...` (original syntax, still supported)
+
+**Pattern types:**
 - **Wildcard**: `_`
 - **Variables**: `x`
 - **Literals**: `42`, `3.14`, `"text"`, `true`, `()`
@@ -35,6 +40,21 @@ Full pattern matching with `match expr with` or `case expr of` (SML-style):
 - **Records**: `{x = a, y = b}` (NEW! destructure records)
 - **Constructors**: `Some x`, `None`, `Cons (h, t)`
 - **Nested patterns**: All patterns compose recursively
+
+**Nested Matching:**
+For deeply nested or complex match expressions, use the `end` keyword to avoid ambiguity:
+```ml
+match Some 42 with
+  Some x ->
+    match Some 10 with
+      Some y -> x + y
+    | None -> x
+    end
+| None -> 0
+end
+```
+
+The `end` keyword is optional for simple cases but recommended for clarity in nested matches.
 
 ### Type System
 - **Primitive types**: `int`, `bool`, `float`, `string`, `unit`

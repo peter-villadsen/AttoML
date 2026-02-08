@@ -25,6 +25,7 @@ namespace AttoML.Core.Parsing
     public sealed class Tuple : Expr { public List<Expr> Items; public Tuple(List<Expr> items){Items=items;} }
     public sealed class ListLit : Expr { public List<Expr> Items; public ListLit(List<Expr> items){Items=items;} }
     public sealed class RecordLit : Expr { public List<(string Name, Expr Expr)> Fields; public RecordLit(List<(string, Expr)> fields){Fields=fields;} }
+    public sealed class RecordAccess : Expr { public Expr Record; public string Field; public RecordAccess(Expr r, string f){Record=r; Field=f;} }
 
     public sealed class Qualify : Expr { public string Module; public string Name; public Qualify(string m,string n){Module=m;Name=n;} }
 
@@ -67,4 +68,5 @@ namespace AttoML.Core.Parsing
     public sealed class TypeName : TypeExpr { public string Name; public TypeName(string n){Name=n;} }
     public sealed class TypeArrow : TypeExpr { public TypeExpr From, To; public TypeArrow(TypeExpr f, TypeExpr t){From=f; To=t;} }
     public sealed class TypeTuple : TypeExpr { public List<TypeExpr> Items; public TypeTuple(List<TypeExpr> items){Items=items;} }
+    public sealed class TypeApp : TypeExpr { public TypeExpr Base; public string Constructor; public TypeApp(TypeExpr b, string c){Base=b; Constructor=c;} }
 }

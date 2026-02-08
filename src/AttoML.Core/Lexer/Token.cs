@@ -32,6 +32,7 @@ namespace AttoML.Core.Lexer
         Exception,
         Raise,
         Handle,
+        End,
         ModuleQualifiedSep, // '.'
         // Punctuation
         Plus,

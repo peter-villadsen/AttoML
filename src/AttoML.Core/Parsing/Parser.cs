@@ -11,6 +11,8 @@ namespace AttoML.Core.Parsing
         private int _pos;
         // Track nested match/handle parsing depth; when depth==1, '|' terminates a branch expression
         private int _insideMatchDepth;
+        // Track how many match/case expressions we're nested inside (to prevent stealing outer match's bars)
+        private int _matchNestingLevel;
 
         public Parser(IEnumerable<Token> tokens)
         {
@@ -309,7 +311,7 @@ namespace AttoML.Core.Parsing
             var expr = ParseAtom();
             while (true)
             {
-                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || Kind == TokenKind.Of || (_insideMatchDepth > 0 && Kind == TokenKind.Bar))
+                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || Kind == TokenKind.Of || Kind == TokenKind.End || (_insideMatchDepth > 0 && Kind == TokenKind.Bar))
                 {
                     break;
                 }
@@ -327,6 +329,15 @@ namespace AttoML.Core.Parsing
                     var right = ParseNoRelational();
                     var append = new Qualify("List", "append");
                     expr = new App(new App(append, expr), right);
+                    continue;
+                }
+                // Handle infix '::' for list cons: x :: xs -> List.cons x xs
+                if (Kind == TokenKind.ColonColon)
+                {
+                    Next();
+                    var right = ParseNoRelational();
+                    var cons = new Qualify("List", "cons");
+                    expr = new App(new App(cons, expr), right);
                     continue;
                 }
                 // Arithmetic infix operators
@@ -489,6 +500,14 @@ namespace AttoML.Core.Parsing
                     expr = new App(new App(append, expr), right);
                     continue;
                 }
+                if (Kind == TokenKind.ColonColon)
+                {
+                    Next();
+                    var right = ParseNoRelational();
+                    var cons = new Qualify("List", "cons");
+                    expr = new App(new App(cons, expr), right);
+                    continue;
+                }
                 if (Kind == TokenKind.Plus || Kind == TokenKind.Minus || Kind == TokenKind.Star || Kind == TokenKind.Slash || Kind == TokenKind.Caret
                     || (Kind == TokenKind.Identifier && (Peek().Text == "div" || Peek().Text == "mod")))
                 {
@@ -580,6 +599,9 @@ namespace AttoML.Core.Parsing
             {
                 Next();
             }
+            // match...with can optionally end with 'end' for explicit termination
+            int startLevel = _matchNestingLevel;
+            _matchNestingLevel++;
             while (true)
             {
                 var pat = ParsePattern();
@@ -588,12 +610,20 @@ namespace AttoML.Core.Parsing
                 var expr = ParseExpr();
                 _insideMatchDepth--;
                 cases.Add((pat, expr));
+                // Continue on Bar
                 if (Kind == TokenKind.Bar)
                 {
                     Next();
                     continue;
                 }
+                // Stop when we see End or any other token
                 break;
+            }
+            _matchNestingLevel--;
+            // Optionally consume 'end' if present
+            if (Kind == TokenKind.End)
+            {
+                Next();
             }
             return new Match(scrutinee, cases);
         }
@@ -609,11 +639,13 @@ namespace AttoML.Core.Parsing
             {
                 Next();
             }
+            // case...of has no explicit 'end', so we use simple Bar consumption
+            // For complex nested cases, use match...with...end instead
             while (true)
             {
                 var pat = ParsePattern();
                 ExpectArrow();
-                _insideMatchDepth++;
+                _insideMatchDepth++;  // Tell ParseApp to stop at Bar
                 var expr = ParseExpr();
                 _insideMatchDepth--;
                 cases.Add((pat, expr));
@@ -639,6 +671,10 @@ namespace AttoML.Core.Parsing
             var cases = new List<(Pattern, Expr)>();
             // Optional leading '|'
             if (Kind == TokenKind.Bar) Next();
+            // Remember both the nesting level and depth when we START this handler
+            int startLevel = _matchNestingLevel;
+            int startDepth = _insideMatchDepth;
+            _matchNestingLevel++;
             while (true)
             {
                 var pat = ParsePattern();
@@ -647,13 +683,16 @@ namespace AttoML.Core.Parsing
                 var expr = ParseExpr();
                 _insideMatchDepth--;
                 cases.Add((pat, expr));
-                if (Kind == TokenKind.Bar)
+                // Continue on Bar only if at the same nesting level AND depth
+                bool depthOK = (startDepth == 0);
+                if (Kind == TokenKind.Bar && _matchNestingLevel == startLevel + 1 && depthOK)
                 {
                     Next();
                     continue;
                 }
                 break;
             }
+            _matchNestingLevel--;
             return cases;
         }
 
@@ -860,10 +899,17 @@ namespace AttoML.Core.Parsing
                     {
                         throw new Exception("Expected at least one parameter after function name in structure");
                     }
-                    
+
+                    // Parse optional type annotation for function
+                    TypeExpr? funTypeAnn = null;
+                    if (Match(TokenKind.Colon))
+                    {
+                        funTypeAnn = ParseTypeExpr();
+                    }
+
                     Expect(TokenKind.Equals);
                     var body = ParseExpr();
-                    
+
                     // Desugar to nested lambdas
                     Expr desugared = body;
                     for (int i = idParams.Count - 1; i >= 0; i--)
@@ -880,8 +926,8 @@ namespace AttoML.Core.Parsing
                             desugared = new Fun(pname, match);
                         }
                     }
-                    
-                    binds.Add(new Binding(bn, null, desugared));
+
+                    binds.Add(new Binding(bn, funTypeAnn, desugared));
                 }
                 else if (Kind == TokenKind.Let)
                 {
@@ -1004,17 +1050,30 @@ namespace AttoML.Core.Parsing
 
         private TypeExpr ParseTypeAtom()
         {
+            TypeExpr baseType;
             if (Match(TokenKind.LParen))
             {
                 var items = new List<TypeExpr>();
                 items.Add(ParseTypeExpr());
                 while (Match(TokenKind.Comma)) items.Add(ParseTypeExpr());
                 Expect(TokenKind.RParen);
-                if (items.Count == 1) return items[0];
-                return new TypeTuple(items);
+                if (items.Count == 1) baseType = items[0];
+                else baseType = new TypeTuple(items);
             }
-            var id = Expect(TokenKind.Identifier).Text;
-            return new TypeName(id);
+            else
+            {
+                var id = Expect(TokenKind.Identifier).Text;
+                baseType = new TypeName(id);
+            }
+
+            // Handle postfix type constructor application (e.g., "t list", "t list list")
+            while (Kind == TokenKind.Identifier && Peek().Text == "list")
+            {
+                Next(); // consume "list"
+                baseType = new TypeApp(baseType, "list");
+            }
+
+            return baseType;
         }
 
         private Expr ParseList()

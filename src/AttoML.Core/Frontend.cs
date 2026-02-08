@@ -84,6 +84,7 @@ namespace AttoML.Core
             BaseTypeEnv.Add("List.tail", new Types.Scheme(new[] { a }, new Types.TFun(new Types.TList(a), new Types.TList(a))));
             BaseTypeEnv.Add("List.hd", new Types.Scheme(new[] { a }, new Types.TFun(new Types.TList(a), a)));
             BaseTypeEnv.Add("List.tl", new Types.Scheme(new[] { a }, new Types.TFun(new Types.TList(a), new Types.TList(a))));
+            BaseTypeEnv.Add("List.cons", new Types.Scheme(new[] { a }, Fun2(a, new Types.TList(a), new Types.TList(a))));
 
             // String module
             BaseTypeEnv.Add("String.concat", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, new Types.TFun(strT, strT))));

@@ -86,6 +86,10 @@ namespace AttoML.Core.Parsing
                     }
                     sb.Append('}');
                     break;
+                case RecordAccess ra:
+                    PrintExpr(sb, ra.Record);
+                    sb.Append('.').Append(ra.Field);
+                    break;
                 case Qualify q:
                     sb.Append(q.Module).Append('.').Append(q.Name);
                     break;

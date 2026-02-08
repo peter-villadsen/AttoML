@@ -284,6 +284,7 @@ namespace AttoML.Core.Lexer
                 "exception" => TokenKind.Exception,
                 "raise" => TokenKind.Raise,
                 "handle" => TokenKind.Handle,
+                "end" => TokenKind.End,
                 "of" => TokenKind.Of,
                 "let" => TokenKind.Let,
                 "rec" => TokenKind.Rec,

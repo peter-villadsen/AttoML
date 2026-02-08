@@ -19,104 +19,104 @@ structure LaTeXRewrite = {
   (* Helper to create rewrite rules as tuples: (name, pattern, template) *)
   fun mkRule (name, pat, tmpl) = (name, pat, tmpl),
 
-  (* Pattern variables *)
-  fun pvar s = Pattern.PVar s,
+  (* EPattern variables *)
+  fun pvar s = EPattern.PVar s,
   fun tvar s = Template.TVar s,
 
   (* Algebraic rewrite rules *)
   fun algebraicRules dummy = [
     (* Commutativity *)
     mkRule ("add_comm",
-      Pattern.PAdd (pvar "?a", pvar "?b"),
+      EPattern.PAdd (pvar "?a", pvar "?b"),
       Template.TAdd (tvar "?b", tvar "?a")),
 
     mkRule ("mul_comm",
-      Pattern.PMul (pvar "?a", pvar "?b"),
+      EPattern.PMul (pvar "?a", pvar "?b"),
       Template.TMul (tvar "?b", tvar "?a")),
 
     (* Associativity - right to left *)
     mkRule ("add_assoc_rl",
-      Pattern.PAdd (Pattern.PAdd (pvar "?a", pvar "?b"), pvar "?c"),
+      EPattern.PAdd (EPattern.PAdd (pvar "?a", pvar "?b"), pvar "?c"),
       Template.TAdd (tvar "?a", Template.TAdd (tvar "?b", tvar "?c"))),
 
     mkRule ("mul_assoc_rl",
-      Pattern.PMul (Pattern.PMul (pvar "?a", pvar "?b"), pvar "?c"),
+      EPattern.PMul (EPattern.PMul (pvar "?a", pvar "?b"), pvar "?c"),
       Template.TMul (tvar "?a", Template.TMul (tvar "?b", tvar "?c"))),
 
     (* Associativity - left to right *)
     mkRule ("add_assoc_lr",
-      Pattern.PAdd (pvar "?a", Pattern.PAdd (pvar "?b", pvar "?c")),
+      EPattern.PAdd (pvar "?a", EPattern.PAdd (pvar "?b", pvar "?c")),
       Template.TAdd (Template.TAdd (tvar "?a", tvar "?b"), tvar "?c")),
 
     mkRule ("mul_assoc_lr",
-      Pattern.PMul (pvar "?a", Pattern.PMul (pvar "?b", pvar "?c")),
+      EPattern.PMul (pvar "?a", EPattern.PMul (pvar "?b", pvar "?c")),
       Template.TMul (Template.TMul (tvar "?a", tvar "?b"), tvar "?c")),
 
     (* Identity *)
     mkRule ("add_zero_l",
-      Pattern.PAdd (Pattern.PConst 0.0, pvar "?a"),
+      EPattern.PAdd (EPattern.PConst 0.0, pvar "?a"),
       tvar "?a"),
 
     mkRule ("add_zero_r",
-      Pattern.PAdd (pvar "?a", Pattern.PConst 0.0),
+      EPattern.PAdd (pvar "?a", EPattern.PConst 0.0),
       tvar "?a"),
 
     mkRule ("mul_one_l",
-      Pattern.PMul (Pattern.PConst 1.0, pvar "?a"),
+      EPattern.PMul (EPattern.PConst 1.0, pvar "?a"),
       tvar "?a"),
 
     mkRule ("mul_one_r",
-      Pattern.PMul (pvar "?a", Pattern.PConst 1.0),
+      EPattern.PMul (pvar "?a", EPattern.PConst 1.0),
       tvar "?a"),
 
     mkRule ("pow_one",
-      Pattern.PPow (pvar "?a", Pattern.PConst 1.0),
+      EPattern.PPow (pvar "?a", EPattern.PConst 1.0),
       tvar "?a"),
 
     (* Distribution *)
     mkRule ("distrib_lr",
-      Pattern.PMul (pvar "?a", Pattern.PAdd (pvar "?b", pvar "?c")),
+      EPattern.PMul (pvar "?a", EPattern.PAdd (pvar "?b", pvar "?c")),
       Template.TAdd (Template.TMul (tvar "?a", tvar "?b"), Template.TMul (tvar "?a", tvar "?c"))),
 
     mkRule ("distrib_rl",
-      Pattern.PMul (Pattern.PAdd (pvar "?a", pvar "?b"), pvar "?c"),
+      EPattern.PMul (EPattern.PAdd (pvar "?a", pvar "?b"), pvar "?c"),
       Template.TAdd (Template.TMul (tvar "?a", tvar "?c"), Template.TMul (tvar "?b", tvar "?c"))),
 
     (* Factoring (reverse of distribution) *)
     mkRule ("factor",
-      Pattern.PAdd (Pattern.PMul (pvar "?a", pvar "?b"), Pattern.PMul (pvar "?a", pvar "?c")),
+      EPattern.PAdd (EPattern.PMul (pvar "?a", pvar "?b"), EPattern.PMul (pvar "?a", pvar "?c")),
       Template.TMul (tvar "?a", Template.TAdd (tvar "?b", tvar "?c"))),
 
     (* Fraction conversion: a * b^-1 -> a / b *)
     mkRule ("frac_conv",
-      Pattern.PMul (pvar "?a", Pattern.PPow (pvar "?b", Pattern.PConst (0.0 - 1.0))),
+      EPattern.PMul (pvar "?a", EPattern.PPow (pvar "?b", EPattern.PConst (0.0 - 1.0))),
       Template.TDiv (tvar "?a", tvar "?b")),
 
     (* Fraction combination: a/c + b/c -> (a+b)/c *)
     mkRule ("frac_add",
-      Pattern.PAdd (Pattern.PDiv (pvar "?a", pvar "?c"), Pattern.PDiv (pvar "?b", pvar "?c")),
+      EPattern.PAdd (EPattern.PDiv (pvar "?a", pvar "?c"), EPattern.PDiv (pvar "?b", pvar "?c")),
       Template.TDiv (Template.TAdd (tvar "?a", tvar "?b"), tvar "?c")),
 
     (* Double negation: --a -> a *)
     mkRule ("double_neg",
-      Pattern.PNeg (Pattern.PNeg (pvar "?a")),
+      EPattern.PNeg (EPattern.PNeg (pvar "?a")),
       tvar "?a"),
 
     (* Negative addition: a + -b -> a - b *)
     mkRule ("neg_to_sub",
-      Pattern.PAdd (pvar "?a", Pattern.PNeg (pvar "?b")),
+      EPattern.PAdd (pvar "?a", EPattern.PNeg (pvar "?b")),
       Template.TSub (tvar "?a", tvar "?b")),
 
     (* Power laws: a^n * a^m -> a^(n+m) *)
     mkRule ("pow_mul",
-      Pattern.PMul (Pattern.PPow (pvar "?a", pvar "?n"), Pattern.PPow (pvar "?a", pvar "?m")),
+      EPattern.PMul (EPattern.PPow (pvar "?a", pvar "?n"), EPattern.PPow (pvar "?a", pvar "?m")),
       Template.TPow (tvar "?a", Template.TAdd (tvar "?n", tvar "?m"))),
 
     (* Trig identity: sin^2(x) + cos^2(x) -> 1 *)
     mkRule ("trig_pythagorean",
-      Pattern.PAdd (
-        Pattern.PPow (Pattern.PSin (pvar "?x"), Pattern.PConst 2.0),
-        Pattern.PPow (Pattern.PCos (pvar "?x"), Pattern.PConst 2.0)
+      EPattern.PAdd (
+        EPattern.PPow (EPattern.PSin (pvar "?x"), EPattern.PConst 2.0),
+        EPattern.PPow (EPattern.PCos (pvar "?x"), EPattern.PConst 2.0)
       ),
       Template.TConst 1.0)
   ],

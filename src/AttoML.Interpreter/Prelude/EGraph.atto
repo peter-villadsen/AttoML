@@ -20,19 +20,19 @@ type ENode =
 | ELog of int
 | ENeg of int
 
-(* Pattern for rewrite rule left-hand sides *)
-type Pattern =
+(* EPattern for rewrite rule left-hand sides - renamed to avoid collision with built-in Pattern *)
+type EPattern =
   PConst of float
 | PVar of string  (* Pattern variable like ?a *)
-| PAdd of Pattern * Pattern
-| PSub of Pattern * Pattern
-| PMul of Pattern * Pattern
-| PDiv of Pattern * Pattern
-| PPow of Pattern * Pattern
-| PSin of Pattern
-| PCos of Pattern
-| PLog of Pattern
-| PNeg of Pattern
+| PAdd of EPattern * EPattern
+| PSub of EPattern * EPattern
+| PMul of EPattern * EPattern
+| PDiv of EPattern * EPattern
+| PPow of EPattern * EPattern
+| PSin of EPattern
+| PCos of EPattern
+| PLog of EPattern
+| PNeg of EPattern
 
 (* Template for rewrite rule right-hand sides *)
 type Template =
@@ -251,33 +251,37 @@ structure EGraph = {
         rebuildClass (eg2, id, rest),
 
   (* Pattern matching *)
-  fun matchPattern (eg, id, pat, subst) =
+  fun matchPattern (eg, id, pat, subst) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * int * EPattern * (string * int) list) -> (string * int) list list =
     case pat of
-      Pattern.PConst r ->
+      EPattern.PConst r ->
         (* Check if e-class contains constant *)
         let (cid, eg1) = find (eg, id) in
         let nodes = case assocFind (cid, classes eg1) of ns :: [] -> ns | [] -> [] in
         if containsConst (nodes, r) then [subst] else []
-    | Pattern.PVar v ->
+    | EPattern.PVar v ->
         (* Bind pattern variable *)
-        case assocFind (v, subst) of
+        match assocFind (v, subst) with
           boundId :: [] -> if boundId = id then [subst] else []
         | [] -> [assocAdd (v, id, subst)]
-    | Pattern.PAdd (a, b) -> matchBinary (eg, id, a, b, subst, isAddNode)
-    | Pattern.PSub (a, b) -> matchBinary (eg, id, a, b, subst, isSubNode)
-    | Pattern.PMul (a, b) -> matchBinary (eg, id, a, b, subst, isMulNode)
-    | Pattern.PDiv (a, b) -> matchBinary (eg, id, a, b, subst, isDivNode)
-    | Pattern.PPow (a, b) -> matchBinary (eg, id, a, b, subst, isPowNode)
-    | Pattern.PSin a -> matchUnary (eg, id, a, subst, isSinNode)
-    | Pattern.PCos a -> matchUnary (eg, id, a, subst, isCosNode)
-    | Pattern.PLog a -> matchUnary (eg, id, a, subst, isLogNode)
-    | Pattern.PNeg a -> matchUnary (eg, id, a, subst, isNegNode),
+        end
+    | EPattern.PAdd (a, b) -> matchBinary (eg, id, a, b, subst, isAddNode)
+    | EPattern.PSub (a, b) -> matchBinary (eg, id, a, b, subst, isSubNode)
+    | EPattern.PMul (a, b) -> matchBinary (eg, id, a, b, subst, isMulNode)
+    | EPattern.PDiv (a, b) -> matchBinary (eg, id, a, b, subst, isDivNode)
+    | EPattern.PPow (a, b) -> matchBinary (eg, id, a, b, subst, isPowNode)
+    | EPattern.PSin a -> matchUnary (eg, id, a, subst, isSinNode)
+    | EPattern.PCos a -> matchUnary (eg, id, a, subst, isCosNode)
+    | EPattern.PLog a -> matchUnary (eg, id, a, subst, isLogNode)
+    | EPattern.PNeg a -> matchUnary (eg, id, a, subst, isNegNode),
 
   fun containsConst (nodes, r) =
     case nodes of
       [] -> false
-    | ENode.EConst r2 :: rest -> if r = r2 then true else containsConst (rest, r)
-    | _ :: rest -> containsConst (rest, r),
+    | n :: rest ->
+        match n with
+          ENode.EConst r2 -> if r = r2 then true else containsConst (rest, r)
+        | _ -> containsConst (rest, r)
+        end,
 
   fun isAddNode node = case node of ENode.EAdd _ -> true | _ -> false,
   fun isSubNode node = case node of ENode.ESub _ -> true | _ -> false,
@@ -289,12 +293,12 @@ structure EGraph = {
   fun isLogNode node = case node of ENode.ELog _ -> true | _ -> false,
   fun isNegNode node = case node of ENode.ENeg _ -> true | _ -> false,
 
-  fun matchBinary (eg, id, patA, patB, subst, predicate) =
+  fun matchBinary (eg, id, patA, patB, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * int * EPattern * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
     let (cid, eg1) = find (eg, id) in
     let nodes = case assocFind (cid, classes eg1) of ns :: [] -> ns | [] -> [] in
     matchBinaryInNodes (eg1, nodes, patA, patB, subst, predicate),
 
-  fun matchBinaryInNodes (eg, nodes, patA, patB, subst, predicate) =
+  fun matchBinaryInNodes (eg, nodes, patA, patB, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * ENode list * EPattern * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
     case nodes of
       [] -> []
     | node :: rest ->
@@ -315,12 +319,12 @@ structure EGraph = {
           | [] -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
         else matchBinaryInNodes (eg, rest, patA, patB, subst, predicate),
 
-  fun matchUnary (eg, id, patA, subst, predicate) =
+  fun matchUnary (eg, id, patA, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * int * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
     let (cid, eg1) = find (eg, id) in
     let nodes = case assocFind (cid, classes eg1) of ns :: [] -> ns | [] -> [] in
     matchUnaryInNodes (eg1, nodes, patA, subst, predicate),
 
-  fun matchUnaryInNodes (eg, nodes, patA, subst, predicate) =
+  fun matchUnaryInNodes (eg, nodes, patA, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * ENode list * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
     case nodes of
       [] -> []
     | node :: rest ->
@@ -342,9 +346,10 @@ structure EGraph = {
     case tmpl of
       Template.TConst r -> addNode (eg, ENode.EConst r)
     | Template.TVar v ->
-        case assocFind (v, subst) of
+        match assocFind (v, subst) with
           id :: [] -> (id, eg)
         | [] -> raise (Fail "unbound pattern variable")
+        end
     | Template.TAdd (a, b) ->
         let (aId, eg1) = instantiate (eg, a, subst) in
         let (bId, eg2) = instantiate (eg1, b, subst) in
@@ -423,13 +428,16 @@ structure EGraph = {
     expr,
 
   fun extractMemo (eg, costFn, id, memo) =
-    case assocFind (id, memo) of
-      [(cost, expr)] -> (cost, expr, memo)
+    match assocFind (id, memo) with
+      result :: [] ->
+        let (cost, expr) = result in
+        (cost, expr, memo)
     | [] ->
-        let nodes = case assocFind (id, classes eg) of ns :: [] -> ns | [] -> [] in
+        let nodes = match assocFind (id, classes eg) with ns :: [] -> ns | [] -> [] end in
         let (bestCost, bestExpr, memo2) = extractBest (eg, costFn, nodes, 1000000.0, Expr.Const 0.0, memo) in
         let memo3 = assocAdd (id, (bestCost, bestExpr), memo2) in
-        (bestCost, bestExpr, memo3),
+        (bestCost, bestExpr, memo3)
+    end,
 
   fun extractBest (eg, costFn, nodes, bestCost, bestExpr, memo) =
     case nodes of

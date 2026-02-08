@@ -82,6 +82,14 @@ namespace AttoML.Interpreter.Builtins
                 if (l.Items.Count == 0) throw new AttoException(new AdtVal("Fail", new StringVal("empty list")));
                 return new ListVal(l.Items.Skip(1).ToList());
             });
+            // cons : 'a -> 'a list -> 'a list (prepends element to list)
+            m["cons"] = Curry2((x, lst) =>
+            {
+                var l = (ListVal)lst;
+                var newItems = new List<Value> { x };
+                newItems.AddRange(l.Items);
+                return new ListVal(newItems);
+            });
             return new ModuleVal(m);
         }
 
