@@ -17,7 +17,10 @@
       "Bash(ls:*)",
       "Bash(dotnet build:*)",
       "Bash(dotnet test:*)",
-      "Bash(dotnet run:*)"
+      "Bash(dotnet run:*)",
+      "Bash(git pull:*)",
+      "Bash(powershell -Command \"\\(Get-Content tests/AttoML.Tests/Phase3RuntimeTests.cs\\) -replace ''\\\\[Fact\\\\\\(Skip = \"\"Requires parametric polymorphism.*?\"\"\\\\\\)\\\\]'', ''[Fact]'' | Set-Content tests/AttoML.Tests/Phase3RuntimeTests.cs\")",
+      "Bash(powershell -Command \"\\(Get-Content tests/AttoML.Tests/OptionTypesTests.cs\\) -replace ''\\\\[Fact\\\\]'', ''[Fact\\(Skip = \"\"Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type\"\"\\)]'' | Set-Content tests/AttoML.Tests/OptionTypesTests.cs\")"
     ]
   }
 }

@@ -1,0 +1,2 @@
+datatype ('a, 'b) either = Left of 'a | Right of 'b
+let x = Left 42 in let y = Right "hello" in (x, y)

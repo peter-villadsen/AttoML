@@ -55,7 +55,7 @@ namespace AttoML.Core.Parsing
     public sealed class StructureDecl : ModuleDecl { public string Name; public string? SigName; public List<Binding> Bindings; public StructureDecl(string n, List<Binding> bs, string? sigName=null){Name=n; Bindings=bs; SigName=sigName;} }
     public sealed class SignatureDecl : ModuleDecl { public string Name; public List<SignatureVal> Vals; public SignatureDecl(string n, List<SignatureVal> vs){Name=n; Vals=vs;} }
     public sealed class OpenDecl : ModuleDecl { public string Name; public OpenDecl(string n){Name=n;} }
-    public sealed class TypeDecl : ModuleDecl { public string Name; public List<TypeCtorDecl> Ctors; public TypeDecl(string n, List<TypeCtorDecl> ctors){Name=n; Ctors=ctors;} }
+    public sealed class TypeDecl : ModuleDecl { public string Name; public List<string> TypeParams; public List<TypeCtorDecl> Ctors; public TypeDecl(string n, List<string> typeParams, List<TypeCtorDecl> ctors){Name=n; TypeParams=typeParams; Ctors=ctors;} }
     public sealed class ValDecl : ModuleDecl { public string Name; public Parsing.TypeExpr? TypeAnn; public Expr Expr; public ValDecl(string n, Parsing.TypeExpr? t, Expr e){Name=n; TypeAnn=t; Expr=e;} }
     public sealed class ExceptionDecl : ModuleDecl { public string Name; public TypeExpr? PayloadType; public ExceptionDecl(string n, TypeExpr? t){Name=n; PayloadType=t;} }
     public sealed class TypeCtorDecl { public string Name; public TypeExpr? PayloadType; public TypeCtorDecl(string n, TypeExpr? t){Name=n; PayloadType=t;} }
@@ -66,6 +66,7 @@ namespace AttoML.Core.Parsing
     // Type expression AST (for signatures and annotations)
     public abstract class TypeExpr { }
     public sealed class TypeName : TypeExpr { public string Name; public TypeName(string n){Name=n;} }
+    public sealed class TypeVar : TypeExpr { public string Name; public TypeVar(string n){Name=n;} }
     public sealed class TypeArrow : TypeExpr { public TypeExpr From, To; public TypeArrow(TypeExpr f, TypeExpr t){From=f; To=t;} }
     public sealed class TypeTuple : TypeExpr { public List<TypeExpr> Items; public TypeTuple(List<TypeExpr> items){Items=items;} }
     public sealed class TypeApp : TypeExpr { public TypeExpr Base; public string Constructor; public TypeApp(TypeExpr b, string c){Base=b; Constructor=c;} }

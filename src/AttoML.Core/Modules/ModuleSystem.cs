@@ -35,7 +35,7 @@ namespace AttoML.Core.Modules
     {
         public Dictionary<string, SignatureInfo> Signatures { get; } = new();
         public Dictionary<string, StructureInfo> Structures { get; } = new();
-        public Dictionary<string, (string TypeName, List<(string Ctor, TypeT? Payload)> Ctors)> Adts { get; } = new();
+        public Dictionary<string, (string TypeName, List<TVar> TypeParams, List<(string Ctor, TypeT? Payload)> Ctors)> Adts { get; } = new();
         public Dictionary<string, TypeT?> Exceptions { get; } = new(); // name -> payload type (null for none)
 
         public void LoadDecls(IEnumerable<ModuleDecl> decls)
@@ -57,12 +57,22 @@ namespace AttoML.Core.Modules
                         Structures[st.Name] = new StructureInfo(st.Name, ord, st.SigName);
                         break;
                     case AttoML.Core.Parsing.TypeDecl td:
+                        // Create type parameter mapping for this ADT
+                        var typeParams = new List<TVar>();
+                        var typeParamMap = new Dictionary<string, TVar>();
+                        foreach (var tpName in td.TypeParams)
+                        {
+                            var tvar = new TVar();
+                            typeParams.Add(tvar);
+                            typeParamMap[tpName] = tvar;
+                        }
+
                         var ctors = new List<(string, TypeT?)>();
                         foreach (var c in td.Ctors)
                         {
-                            ctors.Add((c.Name, c.PayloadType == null ? null : TypeFromTypeExpr(c.PayloadType)));
+                            ctors.Add((c.Name, c.PayloadType == null ? null : TypeFromTypeExpr(c.PayloadType, typeParamMap)));
                         }
-                        Adts[td.Name] = (td.Name, ctors);
+                        Adts[td.Name] = (td.Name, typeParams, ctors);
                         break;
                     case ExceptionDecl ed:
                         Exceptions[ed.Name] = ed.PayloadType == null ? null : TypeFromTypeExpr(ed.PayloadType);
@@ -223,13 +233,22 @@ namespace AttoML.Core.Modules
                     }
                 }
             }
-            // Inject ADT constructors
+            // Inject ADT constructors with polymorphic types
             foreach (var adt in Adts.Values)
             {
+                // Build parametric ADT type: option<'a>, either<'a,'b>, etc.
+                var adtType = new TAdt(adt.TypeName, adt.TypeParams);
+
                 foreach (var (ctor, payload) in adt.Ctors)
                 {
-                    TypeT ctorType = payload == null ? new TAdt(adt.TypeName) : new TFun(payload, new TAdt(adt.TypeName));
-                    var scheme = new Scheme(Array.Empty<TVar>(), ctorType);
+                    // Constructor type: payload -> ADT or just ADT
+                    TypeT ctorType = payload == null ? adtType : new TFun(payload, adtType);
+
+                    // Quantify over type parameters to make polymorphic
+                    // e.g., SOME : forall 'a. 'a -> 'a option
+                    //       None : forall 'a. 'a option
+                    var scheme = new Scheme(adt.TypeParams, ctorType);
+
                     e.Add(ctor, scheme);
                 }
             }
@@ -264,7 +283,7 @@ namespace AttoML.Core.Modules
             return e;
         }
 
-        public static TypeT TypeFromTypeExpr(TypeExpr te)
+        public static TypeT TypeFromTypeExpr(TypeExpr te, Dictionary<string, TVar>? typeParamMap = null)
         {
             return te switch
             {
@@ -279,11 +298,14 @@ namespace AttoML.Core.Modules
                     // Treat any other name as an ADT reference (supports recursive payloads like Expr)
                     _ => new TAdt(tn.Name)
                 },
-                TypeArrow ta => new TFun(TypeFromTypeExpr(ta.From), TypeFromTypeExpr(ta.To)),
-                TypeTuple tt => new TTuple(tt.Items.Select(TypeFromTypeExpr).ToList()),
+                TypeVar tv => typeParamMap != null && typeParamMap.TryGetValue(tv.Name, out var tvar)
+                    ? tvar
+                    : throw new Exception($"Unbound type variable '{tv.Name}"),
+                TypeArrow ta => new TFun(TypeFromTypeExpr(ta.From, typeParamMap), TypeFromTypeExpr(ta.To, typeParamMap)),
+                TypeTuple tt => new TTuple(tt.Items.Select(t => TypeFromTypeExpr(t, typeParamMap)).ToList()),
                 TypeApp tapp => tapp.Constructor switch
                 {
-                    "list" => new TList(TypeFromTypeExpr(tapp.Base)),
+                    "list" => new TList(TypeFromTypeExpr(tapp.Base, typeParamMap)),
                     _ => throw new Exception($"Unknown type constructor: {tapp.Constructor}")
                 },
                 _ => throw new Exception("Unknown type expr")

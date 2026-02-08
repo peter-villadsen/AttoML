@@ -51,15 +51,15 @@ structure Result = {
         Ok x -> onOk x
       | Error e -> onError e,
 
-    (* Convert Ok to OptionInt *)
+    (* Convert Ok to option *)
     fun toOption res = case res of
-        Ok x -> SomeInt x
-      | Error _ -> NoneInt,
+        Ok x -> Some x
+      | Error _ -> None,
 
-    (* Convert Error to OptionInt *)
+    (* Convert Error to option *)
     fun errorToOption res = case res of
-        Ok _ -> NoneInt
-      | Error e -> SomeInt e,
+        Ok _ -> None
+      | Error e -> Some e,
 
     (* Combine two results *)
     fun map2 f res1 res2 =

@@ -1,0 +1,6 @@
+(* Test ENode equality *)
+
+let n1 = ENode.EConst 42.0 in
+let n2 = ENode.EConst 42.0 in
+let result = if n1 = n2 then "equal" else "not equal" in
+result

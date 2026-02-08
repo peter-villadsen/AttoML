@@ -1,0 +1,17 @@
+(* Test complex type annotation with recursive ADT *)
+
+type Template =
+  TConst of float
+| TVar of string
+| TAdd of Template * Template
+
+structure Test = {
+  (* Function with complex return type annotation *)
+  fun testFn (x, tmpl) : (int * Template) -> (string * int) list list =
+    case tmpl of
+      Template.TConst r -> [[("const", x)]]
+    | Template.TVar v -> [[("var", x)]]
+    | Template.TAdd (a, b) -> [[("add", x)]]
+}
+
+Test.testFn (1, Template.TConst 42.0)

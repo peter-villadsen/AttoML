@@ -1,0 +1,3 @@
+(* Test loading all prelude modules *)
+(* This should trigger the same error as the test *)
+Result.andThen (fun x -> Ok (x + 1)) (Ok 42)

@@ -1,0 +1,2 @@
+datatype 'a option = None | Some of 'a
+let x = Some 42 in case x of None -> 0 | Some n -> n + 1

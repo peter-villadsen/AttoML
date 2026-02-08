@@ -1,0 +1,10 @@
+(* Test constant-first ordering with simplification *)
+
+open LaTeX
+
+(* Test: Multiple constants should be folded *)
+let e1 = SymCalc.simplify (SymCalc.parse "a*3*b*2*c") in
+let e2 = SymCalc.simplify (SymCalc.parse "x+5+y+3") in
+let l1 = toLatex e1 in
+let l2 = toLatex e2 in
+String.concat (String.concat l1 " | ") l2

@@ -1,0 +1,3 @@
+datatype 'a option = None | Some of 'a
+structure Option = { fun isSome opt = case opt of Some _ -> true | None -> false, fun map f opt = case opt of Some x -> Some (f x) | None -> None }
+let x = Option.isSome (Some 42) in let y = Option.map (fun n -> n + 1) (Some 10) in (x, y)

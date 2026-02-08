@@ -1,0 +1,21 @@
+(* Test recursive calls with recursive ADT components *)
+
+type Template =
+  TConst of float
+| TVar of string
+| TAdd of Template * Template
+
+structure Test = {
+  (* Recursive function that calls itself with ADT components *)
+  fun process (id, tmpl) : (int * Template) -> (int * int) =
+    case tmpl of
+      Template.TConst r -> (id, 1)
+    | Template.TVar v -> (id, 2)
+    | Template.TAdd (a, b) ->
+        (* Recursive calls with components a and b *)
+        let (id1, c1) = process (id, a) in
+        let (id2, c2) = process (id1, b) in
+        (id2, c1 + c2)
+}
+
+Test.process (0, Template.TAdd (Template.TConst 1.0, Template.TVar "x"))
