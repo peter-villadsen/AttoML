@@ -1,6 +1,0 @@
-(* Test case/of syntax *)
-datatype Option = Some of int | None
-
-case Some 42 of
-    Some x => x
-  | None => 0

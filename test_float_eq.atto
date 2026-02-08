@@ -1,6 +1,0 @@
-(* Test floating point equality *)
-
-let a = 42.0 in
-let b = 42.0 in
-let result = if a = b then "equal" else "not equal" in
-result

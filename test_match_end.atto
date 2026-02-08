@@ -1,7 +1,0 @@
-type Color = Red | Green | Blue
-
-match Red with
-  Red -> 1
-| Green -> 2
-| Blue -> 3
-end

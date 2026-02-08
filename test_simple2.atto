@@ -1,2 +1,0 @@
-(* Simple test *)
-(fn x => x + 1) 5

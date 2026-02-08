@@ -1,2 +1,0 @@
-datatype 'a option = None | Some of 'a
-let x = Some 42 in let y = x + 1 in y

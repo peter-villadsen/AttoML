@@ -1,2 +1,0 @@
-(* Test andalso keyword *)
-true andalso false
