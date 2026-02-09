@@ -381,5 +381,23 @@ structure SymCalc = {
     | Expr.Log a -> String.concat (String.concat "log(" (toStrP (a, 4))) ")",
 
   (* Convert expression to string *)
-  fun toString e = toStrP (e, 0)
+  fun toString e = toStrP (e, 0),
+
+  (* Convenience function: parse a string and simplify the result *)
+  fun parseAndSimplify s = simplify (parse s),
+
+  (* Convenience function: parse, simplify, and convert back to string *)
+  fun parseSimplifyToString s = toString (simplify (parse s)),
+
+  (* Pipeline-friendly differentiation: curried for use with |> *)
+  val diffBy = fun v -> fun expr -> diff (v, expr),
+
+  (* Pipeline combo: parse then differentiate *)
+  val parseAndDiff = fun v -> fun s -> diff (v, parse s),
+
+  (* Full pipeline: parse -> diff -> simplify *)
+  val parseDiffSimplify = fun v -> fun s -> simplify (diff (v, parse s)),
+
+  (* Full pipeline: parse -> diff -> simplify -> toString *)
+  val parseDiffToString = fun v -> fun s -> toString (simplify (diff (v, parse s)))
 }

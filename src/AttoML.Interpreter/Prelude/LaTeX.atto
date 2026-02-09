@@ -144,5 +144,27 @@ structure LaTeX = {
     let optimized = LaTeXRewrite.optimizeForLatex (simplified, 10) in
     let original = toLatex simplified in
     let result = toLatex optimized in
-    String.concat (String.concat (String.concat (String.concat "Original: " original) "\nOptimized: ") result) "\n"
+    String.concat (String.concat (String.concat (String.concat "Original: " original) "\nOptimized: ") result) "\n",
+
+  (* Pipeline-friendly functions *)
+
+  (* Simplify then convert to LaTeX *)
+  fun simplifyToLatex expr = toLatex (SymCalc.simplify expr),
+
+  (* Parse and convert to LaTeX *)
+  fun parseToLatex s = toLatex (SymCalc.parse s),
+
+  (* Parse, simplify, and convert to LaTeX *)
+  fun parseSimplifyToLatex s = toLatex (SymCalc.simplify (SymCalc.parse s)),
+
+  (* Parse, differentiate, simplify, and convert to LaTeX *)
+  val parseDiffToLatex = fun v -> fun s ->
+    toLatex (SymCalc.simplify (SymCalc.diff (v, SymCalc.parse s))),
+
+  (* Differentiate (pipeline-friendly) and convert to LaTeX *)
+  val diffToLatex = fun v -> fun expr ->
+    toLatex (SymCalc.simplify (SymCalc.diff (v, expr))),
+
+  (* Canonicalize and convert to LaTeX (pipeline-friendly) *)
+  fun canonToLatex expr = toLatex (canonicalize expr)
 }
