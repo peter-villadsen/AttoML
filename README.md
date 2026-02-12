@@ -52,6 +52,9 @@ List.foldl (fun a -> fun x -> a + x) 0 (List.filter (fun x -> x > 5) (List.map (
 - **Let bindings**: `let x = expr in body` with type annotations
 - **Recursion**: `let rec f x = body in rest`
 - **Conditionals**: `if cond then expr1 else expr2`
+- **Comments**:
+  - Block comments: `(* ... *)` with nesting support
+  - Line comments: `// comment to end of line`
 
 ### Data Structures
 - **Tuples**: `(1, "hello", true)`
