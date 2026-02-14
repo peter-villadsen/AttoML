@@ -273,4 +273,23 @@ namespace AttoML.Interpreter.Runtime
         }
         public override string ToString() => ActualValue?.ToString() ?? "<placeholder>";
     }
+
+    public sealed class StreamVal : Value
+    {
+        public int Id { get; }
+        public string Type { get; } // "in" or "out"
+
+        public StreamVal(int id, string type)
+        {
+            Id = id;
+            Type = type;
+        }
+
+        public override string ToString() => $"<{Type}stream:{Id}>";
+
+        public override bool Equals(object? obj) =>
+            obj is StreamVal other && Id == other.Id && Type == other.Type;
+
+        public override int GetHashCode() => HashCode.Combine(Id, Type);
+    }
 }

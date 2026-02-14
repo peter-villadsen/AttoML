@@ -325,11 +325,28 @@ namespace AttoML.Interpreter
 			{
 				evaluator.GlobalEnv.Set($"Set.{kv.Key}", kv.Value);
 			}
-			var mapMod = MapModule.Build();
-			evaluator.Modules["Map"] = mapMod;
-			foreach (var kv in mapMod.Members)
+			// MapImplementation module (low-level, internal)
+			// The high-level Map wrapper is loaded from Prelude/Map.atto
+			var mapImplMod = MapImplementationModule.Build();
+			evaluator.Modules["MapImplementation"] = mapImplMod;
+			foreach (var kv in mapImplMod.Members)
 			{
-				evaluator.GlobalEnv.Set($"Map.{kv.Key}", kv.Value);
+				evaluator.GlobalEnv.Set($"MapImplementation.{kv.Key}", kv.Value);
+			}
+			// TextIOImplementation module (low-level, internal)
+			// The high-level TextIO wrapper is loaded from Prelude/TextIO.atto
+			var textIOImplMod = TextIOImplementationModule.Build();
+			evaluator.Modules["TextIOImplementation"] = textIOImplMod;
+			foreach (var kv in textIOImplMod.Members)
+			{
+				evaluator.GlobalEnv.Set($"TextIOImplementation.{kv.Key}", kv.Value);
+			}
+			// HTTP module
+			var httpMod = HttpModule.Build();
+			evaluator.Modules["Http"] = httpMod;
+			foreach (var kv in httpMod.Members)
+			{
+				evaluator.GlobalEnv.Set($"Http.{kv.Key}", kv.Value);
 			}
 			// Also open Base by default for convenience
 			foreach (var kv in baseMod.Members)
@@ -421,6 +438,8 @@ namespace AttoML.Interpreter
 			}
 			LoadOne("Option.atto");
 			LoadOne("Result.atto");
+			LoadOne("TextIO.atto");
+			LoadOne("Map.atto");
 			LoadOne("Complex.atto");
 			LoadOne("SymCalc.atto");
 			LoadOne("EGraph.atto");

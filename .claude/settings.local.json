@@ -20,7 +20,30 @@
       "Bash(dotnet run:*)",
       "Bash(git pull:*)",
       "Bash(powershell -Command \"\\(Get-Content tests/AttoML.Tests/Phase3RuntimeTests.cs\\) -replace ''\\\\[Fact\\\\\\(Skip = \"\"Requires parametric polymorphism.*?\"\"\\\\\\)\\\\]'', ''[Fact]'' | Set-Content tests/AttoML.Tests/Phase3RuntimeTests.cs\")",
-      "Bash(powershell -Command \"\\(Get-Content tests/AttoML.Tests/OptionTypesTests.cs\\) -replace ''\\\\[Fact\\\\]'', ''[Fact\\(Skip = \"\"Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type\"\"\\)]'' | Set-Content tests/AttoML.Tests/OptionTypesTests.cs\")"
+      "Bash(powershell -Command \"\\(Get-Content tests/AttoML.Tests/OptionTypesTests.cs\\) -replace ''\\\\[Fact\\\\]'', ''[Fact\\(Skip = \"\"Tests monomorphic OptionInt/OptionFloat - now superseded by polymorphic option type\"\"\\)]'' | Set-Content tests/AttoML.Tests/OptionTypesTests.cs\")",
+      "Bash(git stash pop:*)",
+      "Bash(git stash drop:*)",
+      "Bash(git mv:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"Run $i:\")",
+      "Bash(done)",
+      "Bash(echo:*)",
+      "Bash(Some 42)",
+      "Bash(__NEW_LINE_8fa2110bf274235e__ None)",
+      "Bash(__NEW_LINE_8fa2110bf274235e__ EOF)",
+      "Bash(open:*)",
+      "Bash(parseAndSimplify \"x * 1 + 0\")",
+      "Bash(__NEW_LINE_722ec92016eaaaf8__ parseSimplifyToString \"x * 1 + 0\")",
+      "Bash(__NEW_LINE_722ec92016eaaaf8__ parseSimplifyToString \"\\(a + b\\) * \\(a - b\\)\")",
+      "Bash(__NEW_LINE_722ec92016eaaaf8__ EOF)",
+      "Bash(parse \"x ^ 3\")",
+      "Bash(\"x\")",
+      "Bash(parseDiffToLatex \"x\" \"x ^ 4 + x ^ 2\")",
+      "Bash(parseSimplifyToLatex \"x * 1 + 0 * y\")",
+      "Bash(parse:*)",
+      "Bash(EOF)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:smlfamily.github.io)"
     ]
   }
 }

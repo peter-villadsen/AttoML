@@ -1,0 +1,29 @@
+(* Map Module - Generic key-value maps *)
+(* This is a high-level wrapper around MapImplementation *)
+(* Provides idiomatic ML API with proper option types *)
+
+structure Map = {
+    (* Re-export functions that don't return options *)
+    val empty = MapImplementation.empty,
+    val singleton = MapImplementation.singleton,
+    val add = MapImplementation.add,
+    val remove = MapImplementation.remove,
+    val contains = MapImplementation.contains,
+    val size = MapImplementation.size,
+    val isEmpty = MapImplementation.isEmpty,
+    val keys = MapImplementation.keys,
+    val values = MapImplementation.values,
+    val toList = MapImplementation.toList,
+    val fromList = MapImplementation.fromList,
+    val mapValues = MapImplementation.mapValues,
+    val fold = MapImplementation.fold,
+
+    (* Wrap get to convert list encoding to proper option type *)
+    (* MapImplementation.get returns: [] = not found, [value] = found *)
+    (* We convert to: None = not found, Some value = found *)
+    fun get key map =
+        case MapImplementation.get key map of
+            [] -> None
+          | value :: [] -> Some value
+          | _ -> raise (Fail "Map.get: impossible - implementation returned invalid list")
+}

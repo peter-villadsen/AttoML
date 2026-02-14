@@ -1,0 +1,33 @@
+(* Practical Example: Fetch data from API and save to file *)
+
+let _ = TextIO.print "=== Practical Example: API to File ===\n\n" in
+
+(* 1. Fetch data from a public API *)
+let _ = TextIO.print "Fetching data from API...\n" in
+let apiData = Http.get "https://httpbin.org/uuid" in
+let _ = TextIO.print "Data received!\n\n" in
+
+(* 2. Save the response to a file *)
+let _ = TextIO.print "Saving to file...\n" in
+let outStream = TextIO.openOut "api_response.json" in
+let _ = TextIO.output outStream apiData in
+let _ = TextIO.closeOut outStream in
+let _ = TextIO.print "Data saved to api_response.json\n\n" in
+
+(* 3. Read it back and verify *)
+let _ = TextIO.print "Reading back from file...\n" in
+let inStream = TextIO.openIn "api_response.json" in
+let content = TextIO.input inStream in
+let _ = TextIO.closeIn inStream in
+let _ = TextIO.print "File contents:\n" in
+let _ = TextIO.print content in
+let _ = TextIO.print "\n" in
+
+(* 4. Create a log entry *)
+let _ = TextIO.print "Appending to log...\n" in
+let logStream = TextIO.openAppend "api_log.txt" in
+let _ = TextIO.output logStream "Fetched UUID at " in
+let _ = TextIO.output logStream "2025-02-14\n" in
+let _ = TextIO.closeOut logStream in
+
+TextIO.print "=== Example complete! ===\n"

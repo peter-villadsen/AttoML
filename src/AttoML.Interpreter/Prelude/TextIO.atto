@@ -1,0 +1,30 @@
+(* TextIO Module - Standard ML-style I/O *)
+(* This is a high-level wrapper around TextIOImplementation *)
+(* Provides idiomatic ML API with proper option types *)
+
+structure TextIO = {
+    (* Re-export stream values *)
+    val stdIn = TextIOImplementation.stdIn,
+    val stdOut = TextIOImplementation.stdOut,
+    val stdErr = TextIOImplementation.stdErr,
+
+    (* Re-export simple functions directly *)
+    val print = TextIOImplementation.print,
+    val openIn = TextIOImplementation.openIn,
+    val openOut = TextIOImplementation.openOut,
+    val openAppend = TextIOImplementation.openAppend,
+    val closeIn = TextIOImplementation.closeIn,
+    val closeOut = TextIOImplementation.closeOut,
+    val input = TextIOImplementation.input,
+    val output = TextIOImplementation.output,
+    val flushOut = TextIOImplementation.flushOut,
+
+    (* Wrap inputLine to convert list encoding to proper option type *)
+    (* TextIOImplementation.inputLine returns: [] = EOF, [line] = data *)
+    (* We convert to: None = EOF, Some line = data *)
+    fun inputLine stream =
+        case TextIOImplementation.inputLine stream of
+            [] -> None
+          | line :: [] -> Some line
+          | _ -> raise (Fail "TextIO.inputLine: impossible - implementation returned invalid list")
+}

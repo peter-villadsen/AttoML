@@ -81,11 +81,11 @@ namespace AttoML.Tests
             {
                 ev.GlobalEnv.Set($"Set.{kv.Key}", kv.Value);
             }
-            var mapMod = AttoML.Interpreter.Builtins.MapModule.Build();
-            ev.Modules["Map"] = mapMod;
-            foreach (var kv in mapMod.Members)
+            var mapImplMod = AttoML.Interpreter.Builtins.MapImplementationModule.Build();
+            ev.Modules["MapImplementation"] = mapImplMod;
+            foreach (var kv in mapImplMod.Members)
             {
-                ev.GlobalEnv.Set($"Map.{kv.Key}", kv.Value);
+                ev.GlobalEnv.Set($"MapImplementation.{kv.Key}", kv.Value);
             }
         }
 
@@ -123,6 +123,8 @@ namespace AttoML.Tests
 
             LoadPreludeFile("Option.atto");
             LoadPreludeFile("Result.atto");
+            LoadPreludeFile("TextIO.atto");
+            LoadPreludeFile("Map.atto");
         }
     }
 }

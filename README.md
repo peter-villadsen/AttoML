@@ -226,6 +226,8 @@ The `end` keyword is optional for simple cases but recommended for clarity in ne
 - **Tuple**: `fst`, `snd`, `swap`, `curry`, `uncurry`, `fst3`, `snd3`, `thd3`
 - **Set**: `empty`, `singleton`, `add`, `remove`, `contains`, `size`, `isEmpty`, `union`, `intersect`, `diff`, `isSubset`, `toList`, `fromList`
 - **Map**: `empty`, `singleton`, `add`, `remove`, `get`, `contains`, `size`, `isEmpty`, `keys`, `values`, `toList`, `fromList`, `mapValues`, `fold`
+- **TextIO** (NEW!): `print`, `openIn`, `openOut`, `openAppend`, `closeIn`, `closeOut`, `input`, `inputLine`, `output`, `flushOut`, `stdIn`, `stdOut`, `stdErr` - Standard ML-style file and console I/O ([docs](docs/TextIO_and_HTTP.md))
+- **Http** (NEW!): `get`, `post`, `postJson`, `getWithHeaders` - Basic HTTP client for web requests ([docs](docs/TextIO_and_HTTP.md))
 
 #### Prelude Modules (AttoML)
 - **Option** (polymorphic `'a option`): `isSome`, `isNone`, `getOr`, `map`, `bind`, `filter`, `fold`, `toList`, `fromList`, `map2`, `orElse`, `andThen`

@@ -147,30 +147,68 @@ namespace AttoML.Core
             BaseTypeEnv.Add("Set.toList", new Types.Scheme(new[] { tSetElem }, new Types.TFun(setT, new Types.TList(tSetElem))));
             BaseTypeEnv.Add("Set.fromList", new Types.Scheme(new[] { tSetElem }, new Types.TFun(new Types.TList(tSetElem), setT)));
 
-            // Map module (operates on generic ('k, 'v) maps)
+            // MapImplementation module (low-level, internal)
             var tMapKey = new Types.TVar();
             var tMapVal = new Types.TVar();
             var mapT = new Types.TMap(tMapKey, tMapVal);
-            BaseTypeEnv.Add("Map.empty", new Types.Scheme(new[] { tMapKey, tMapVal }, mapT));
-            BaseTypeEnv.Add("Map.singleton", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, tMapVal, mapT)));
-            BaseTypeEnv.Add("Map.add", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun3(tMapKey, tMapVal, mapT, mapT)));
-            BaseTypeEnv.Add("Map.remove", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, mapT)));
-            // Map.get returns 'v option
-            var tGetOption = new Types.TAdt("option", new[] { tMapVal });
-            BaseTypeEnv.Add("Map.get", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, tGetOption)));
-            BaseTypeEnv.Add("Map.contains", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, boolT)));
-            BaseTypeEnv.Add("Map.size", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, intT)));
-            BaseTypeEnv.Add("Map.isEmpty", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, boolT)));
-            BaseTypeEnv.Add("Map.keys", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(tMapKey))));
-            BaseTypeEnv.Add("Map.values", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(tMapVal))));
+            BaseTypeEnv.Add("MapImplementation.empty", new Types.Scheme(new[] { tMapKey, tMapVal }, mapT));
+            BaseTypeEnv.Add("MapImplementation.singleton", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, tMapVal, mapT)));
+            BaseTypeEnv.Add("MapImplementation.add", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun3(tMapKey, tMapVal, mapT, mapT)));
+            BaseTypeEnv.Add("MapImplementation.remove", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, mapT)));
+            // MapImplementation.get returns 'v list: [] = not found, [value] = found
+            BaseTypeEnv.Add("MapImplementation.get", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, new Types.TList(tMapVal))));
+            BaseTypeEnv.Add("MapImplementation.contains", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, boolT)));
+            BaseTypeEnv.Add("MapImplementation.size", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, intT)));
+            BaseTypeEnv.Add("MapImplementation.isEmpty", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, boolT)));
+            BaseTypeEnv.Add("MapImplementation.keys", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(tMapKey))));
+            BaseTypeEnv.Add("MapImplementation.values", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(tMapVal))));
             var kvPairT = new Types.TTuple(new[] { tMapKey, tMapVal });
-            BaseTypeEnv.Add("Map.toList", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(kvPairT))));
-            BaseTypeEnv.Add("Map.fromList", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(new Types.TList(kvPairT), mapT)));
+            BaseTypeEnv.Add("MapImplementation.toList", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(mapT, new Types.TList(kvPairT))));
+            BaseTypeEnv.Add("MapImplementation.fromList", new Types.Scheme(new[] { tMapKey, tMapVal }, new Types.TFun(new Types.TList(kvPairT), mapT)));
             var tMapVal2 = new Types.TVar();
             var mapT2 = new Types.TMap(tMapKey, tMapVal2);
-            BaseTypeEnv.Add("Map.mapValues", new Types.Scheme(new[] { tMapKey, tMapVal, tMapVal2 }, Fun2(new Types.TFun(tMapVal, tMapVal2), mapT, mapT2)));
+            BaseTypeEnv.Add("MapImplementation.mapValues", new Types.Scheme(new[] { tMapKey, tMapVal, tMapVal2 }, Fun2(new Types.TFun(tMapVal, tMapVal2), mapT, mapT2)));
             var t7 = new Types.TVar();
-            BaseTypeEnv.Add("Map.fold", new Types.Scheme(new[] { tMapKey, tMapVal, t7 }, Fun3(new Types.TFun(tMapKey, new Types.TFun(tMapVal, new Types.TFun(t7, t7))), t7, mapT, t7)));
+            BaseTypeEnv.Add("MapImplementation.fold", new Types.Scheme(new[] { tMapKey, tMapVal, t7 }, Fun3(new Types.TFun(tMapKey, new Types.TFun(tMapVal, new Types.TFun(t7, t7))), t7, mapT, t7)));
+
+            // Map module (high-level wrapper, defined in Prelude/Map.atto)
+            // This will be populated when the Prelude loads, but we add signature for
+            // Map.get which returns proper option type
+            var tGetOption = new Types.TAdt("option", new[] { tMapVal });
+            BaseTypeEnv.Add("Map.get", new Types.Scheme(new[] { tMapKey, tMapVal }, Fun2(tMapKey, mapT, tGetOption)));
+
+            // TextIOImplementation module (low-level, internal)
+            // Stream types are opaque (represented as special values at runtime)
+            var instreamT = new Types.TConst("instream");
+            var outstreamT = new Types.TConst("outstream");
+            BaseTypeEnv.Add("TextIOImplementation.stdIn", new Types.Scheme(Array.Empty<Types.TVar>(), instreamT));
+            BaseTypeEnv.Add("TextIOImplementation.stdOut", new Types.Scheme(Array.Empty<Types.TVar>(), outstreamT));
+            BaseTypeEnv.Add("TextIOImplementation.stdErr", new Types.Scheme(Array.Empty<Types.TVar>(), outstreamT));
+            BaseTypeEnv.Add("TextIOImplementation.print", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, unitT)));
+            BaseTypeEnv.Add("TextIOImplementation.openIn", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, instreamT)));
+            BaseTypeEnv.Add("TextIOImplementation.openOut", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, outstreamT)));
+            BaseTypeEnv.Add("TextIOImplementation.openAppend", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, outstreamT)));
+            BaseTypeEnv.Add("TextIOImplementation.closeIn", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(instreamT, unitT)));
+            BaseTypeEnv.Add("TextIOImplementation.closeOut", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(outstreamT, unitT)));
+            // inputLine returns string list: [] = EOF, [line] = data
+            BaseTypeEnv.Add("TextIOImplementation.inputLine", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(instreamT, new Types.TList(strT))));
+            BaseTypeEnv.Add("TextIOImplementation.input", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(instreamT, strT)));
+            BaseTypeEnv.Add("TextIOImplementation.output", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(outstreamT, strT, unitT)));
+            BaseTypeEnv.Add("TextIOImplementation.flushOut", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(outstreamT, unitT)));
+
+            // TextIO module (high-level wrapper, defined in Prelude/TextIO.atto)
+            // This will be populated when the Prelude loads, but we add signatures for the
+            // functions that differ from the implementation (e.g., inputLine returns option)
+            var strOptionT = new Types.TAdt("option", new[] { strT });
+            BaseTypeEnv.Add("TextIO.inputLine", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(instreamT, strOptionT)));
+
+            // HTTP module
+            BaseTypeEnv.Add("Http.get", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, strT)));
+            BaseTypeEnv.Add("Http.post", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(strT, strT, strT)));
+            BaseTypeEnv.Add("Http.postJson", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(strT, strT, strT)));
+            // getWithHeaders takes (string * string) list as headers
+            var strPairT = new Types.TTuple(new[] { strT, strT });
+            BaseTypeEnv.Add("Http.getWithHeaders", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(strT, new Types.TList(strPairT), strT)));
 
             // Do not pre-register module-specific functions like SymCalc.* in the base env.
             // Their types are inferred from the prelude modules during compilation.

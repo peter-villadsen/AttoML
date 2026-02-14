@@ -5,7 +5,12 @@ using AttoML.Interpreter.Runtime;
 
 namespace AttoML.Interpreter.Builtins
 {
-    public static class MapModule
+    /// <summary>
+    /// Low-level Map implementation module.
+    /// Returns simple types (lists) instead of ADTs to avoid type system conflicts.
+    /// The high-level Map wrapper (in Prelude) provides the idiomatic ML API.
+    /// </summary>
+    public static class MapImplementationModule
     {
         public static ModuleVal Build()
         {
@@ -53,6 +58,7 @@ namespace AttoML.Interpreter.Builtins
                     });
                 }),
 
+                // get returns 'v list: [] = not found, [value] = found
                 ["get"] = new ClosureVal(k =>
                 {
                     return new ClosureVal(m =>
@@ -60,8 +66,8 @@ namespace AttoML.Interpreter.Builtins
                         if (m is MapVal mv)
                         {
                             if (mv.Entries.TryGetValue(k, out var val))
-                                return new AdtVal("Some", val);
-                            return new AdtVal("None", null);
+                                return new ListVal(new[] { val }); // Found = [value]
+                            return new ListVal(Array.Empty<Value>()); // Not found = []
                         }
                         throw new Exception("get expects a key and a map");
                     });

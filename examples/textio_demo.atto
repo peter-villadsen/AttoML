@@ -1,0 +1,51 @@
+(* TextIO Module Demo - Working Features *)
+
+let _ = TextIO.print "=== TextIO Module Demonstration ===\n\n" in
+
+(* 1. Print to stdout *)
+let _ = TextIO.print "1. Printing to stdout works!\n\n" in
+
+(* 2. Write to file *)
+let _ = TextIO.print "2. Writing to file...\n" in
+let outStream = TextIO.openOut "demo_output.txt" in
+let _ = TextIO.output outStream "Hello from AttoML!\n" in
+let _ = TextIO.output outStream "This is line 2.\n" in
+let _ = TextIO.output outStream "This is line 3.\n" in
+let _ = TextIO.closeOut outStream in
+let _ = TextIO.print "   File written successfully!\n\n" in
+
+(* 3. Read entire file *)
+let _ = TextIO.print "3. Reading entire file...\n" in
+let inStream = TextIO.openIn "demo_output.txt" in
+let content = TextIO.input inStream in
+let _ = TextIO.closeIn inStream in
+let _ = TextIO.print "   File contents:\n" in
+let _ = TextIO.print "   ---\n" in
+let _ = TextIO.print ("   " ^ content) in
+let _ = TextIO.print "   ---\n\n" in
+
+(* 4. Append to file *)
+let _ = TextIO.print "4. Appending to file...\n" in
+let appendStream = TextIO.openAppend "demo_output.txt" in
+let _ = TextIO.output appendStream "This line was appended!\n" in
+let _ = TextIO.closeOut appendStream in
+let _ = TextIO.print "   Appended successfully!\n\n" in
+
+(* 5. Read the updated file *)
+let _ = TextIO.print "5. Reading updated file...\n" in
+let inStream2 = TextIO.openIn "demo_output.txt" in
+let updatedContent = TextIO.input inStream2 in
+let _ = TextIO.closeIn inStream2 in
+let _ = TextIO.print "   Updated contents:\n" in
+let _ = TextIO.print "   ---\n" in
+let _ = TextIO.print ("   " ^ updatedContent) in
+let _ = TextIO.print "   ---\n\n" in
+
+(* 6. Standard streams *)
+let _ = TextIO.print "6. Using standard streams...\n" in
+let _ = TextIO.output TextIO.stdOut "   This goes to stdout\n" in
+let _ = TextIO.output TextIO.stdErr "   This goes to stderr\n" in
+let _ = TextIO.flushOut TextIO.stdOut in
+let _ = TextIO.flushOut TextIO.stdErr in
+
+TextIO.print "\n=== Demo Complete! ===\n"
