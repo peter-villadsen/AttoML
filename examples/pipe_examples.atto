@@ -56,7 +56,7 @@ val example7 =
     15
     |> (fun x -> x - 5)
     |> processValue
-    |> (fun r -> case r of Ok v -> v * 2 | Error _ -> 0)
+    |> (fun r -> match r with Ok v -> v * 2 | Error _ -> 0)
     (* Result: 20 *)
 
 (* Example 8: Combining list operations *)

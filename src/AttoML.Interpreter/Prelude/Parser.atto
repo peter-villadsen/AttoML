@@ -1,0 +1,170 @@
+(* Parser Monad - Composable parsing library *)
+(* A parser is a function that consumes input and returns a result with remaining input *)
+
+(* Parser type: wraps a function from string to optional (result, remaining) *)
+datatype 'a Parser = Parser of (string -> ('a * string) option)
+
+structure Parser = {
+    (* ===== Core Monad Operations ===== *)
+
+    (* Run a parser on input *)
+    fun run p input =
+        match p with Parser f -> f input end,
+
+    (* pure/return: Create a parser that succeeds without consuming input *)
+    fun pure x =
+        Parser (fun input -> Some (x, input)),
+
+    (* bind (>>=): Sequence two parsers, threading input through *)
+    fun bind p f =
+        Parser (fun input ->
+            match run p input with None -> None
+              | Some (a, rest) ->
+                  let p2 = f a in
+                  run p2 rest end
+        ),
+
+    (* map (fmap): Transform the result of a parser *)
+    fun map f p =
+        bind p (fun x -> pure (f x)),
+
+    (* andThen (>>): Sequence two parsers, discarding first result *)
+    fun andThen p1 p2 =
+        bind p1 (fun _ -> p2),
+
+    (* ===== Basic Parsers ===== *)
+
+    (* Parse a specific character *)
+    fun char c =
+        Parser (fun input ->
+            match String.explode input with [] -> None
+              | ch :: rest ->
+                  if ch = c then
+                      Some (ch, String.implode rest)
+                  else
+                      None end
+        ),
+
+    (* Parse any single character *)
+    val anyChar =
+        Parser (fun input ->
+            match String.explode input with [] -> None
+              | ch :: rest -> Some (ch, String.implode rest) end
+        ),
+
+    (* Parse a character satisfying a predicate *)
+    fun satisfy pred =
+        Parser (fun input ->
+            match String.explode input with [] -> None
+              | ch :: rest ->
+                  if pred ch then
+                      Some (ch, String.implode rest)
+                  else
+                      None end
+        ),
+
+    (* Parse an exact string *)
+    fun string str =
+        Parser (fun input ->
+            let len = String.size str in
+            let prefix = String.substring input 0 len in
+            if prefix = str then
+                Some (str, String.substring input len (String.size input - len))
+            else
+                None
+        ),
+
+    (* Always fail *)
+    val fail =
+        Parser (fun input -> None),
+
+    (* ===== Combinators ===== *)
+
+    (* Try first parser; if it fails, try second (choice/alternative) *)
+    fun orElse p1 p2 =
+        Parser (fun input ->
+            match run p1 input with Some result -> Some result
+              | None -> run p2 input end
+        ),
+
+    (* Parse zero or more occurrences *)
+    fun many p =
+        Parser (fun input ->
+            match run p input with None -> Some ([], input)
+              | Some (x, rest) ->
+                  match run (many p) rest with Some (xs, final) -> Some (x :: xs, final)
+                    | None -> Some ([x], rest) end end
+        ),
+
+    (* Parse one or more occurrences *)
+    fun many1 p =
+        bind p (fun x ->
+            bind (many p) (fun xs ->
+                pure (x :: xs)
+            )
+        ),
+
+    (* Parse zero or one occurrence *)
+    fun optional p =
+        orElse (map (fun x -> Some x) p) (pure None),
+
+    (* Parse items separated by a separator *)
+    fun sepBy p sep =
+        orElse
+            (bind p (fun x ->
+                bind (many (andThen sep p)) (fun xs ->
+                    pure (x :: xs)
+                )
+            ))
+            (pure []),
+
+    (* Parse between opening and closing *)
+    fun between open close p =
+        bind open (fun _ ->
+            bind p (fun x ->
+                bind close (fun _ ->
+                    pure x
+                )
+            )
+        ),
+
+    (* Choice between multiple parsers *)
+    fun choice ps =
+        match ps with [] -> fail
+          | p :: rest -> orElse p (choice rest) end,
+
+    (* ===== Common Parsers ===== *)
+
+    (* Parse a digit character *)
+    val digit =
+        satisfy (fun c ->
+            let code = String.sub (c, 0) in
+            code >= String.sub ("0", 0) andalso code <= String.sub ("9", 0)
+        ),
+
+    (* Parse a letter *)
+    val letter =
+        satisfy (fun c ->
+            let code = String.sub (c, 0) in
+            (code >= String.sub ("a", 0) andalso code <= String.sub ("z", 0)) orelse
+            (code >= String.sub ("A", 0) andalso code <= String.sub ("Z", 0))
+        ),
+
+    (* Parse whitespace *)
+    val space = (satisfy (fun c -> c = " " orelse c = "\n" orelse c = "\t")),
+
+    (* Parse one or more spaces *)
+    val spaces = (many1 space),
+
+    (* Parse a sequence of digits as an integer *)
+    val number =
+        (map (fun digits -> String.toInt (String.implode digits)) (many1 digit)),
+
+    (* Parse an identifier (letter followed by letters/digits) *)
+    val identifier =
+        (bind letter (fun first ->
+            bind (many (orElse letter digit)) (fun rest ->
+                pure (String.implode (first :: rest))
+            )
+        ))
+}

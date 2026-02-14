@@ -42,13 +42,11 @@ val _ = TextIO.print "\n"
 exception Http of string
 
 fun safeGet url =
-    case Http.get url of
-        response -> Some response
+    match Http.get url with response -> Some response
     handle Http msg -> None
 
 val result = safeGet "https://httpbin.org/get"
-val _ = case result of
-    Some resp -> TextIO.print ("Success: " ^ resp ^ "\n")
+val _ = match result with Some resp -> TextIO.print ("Success: " ^ resp ^ "\n")
   | None -> TextIO.print "Request failed\n"
 *)
 

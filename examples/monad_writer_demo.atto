@@ -1,0 +1,116 @@
+(* Writer Monad Examples - Accumulate logs alongside computation *)
+
+let _ = TextIO.print "=== Writer Monad Demo ===\n\n" in
+
+(* Example 1: Basic logging with tell *)
+let _ = TextIO.print "1. Basic Logging:\n" in
+let computation1 =
+    Writer.bind (Writer.tell "Starting computation\n") (fun _ ->
+        Writer.bind (Writer.pure 42) (fun x ->
+            Writer.bind (Writer.tell "Computed value: 42\n") (fun _ ->
+                Writer.pure x
+            )
+        )
+    )
+in
+let (result1, logs1) = Writer.run computation1 in
+let _ = TextIO.print "   Result: " in
+let _ = TextIO.print (String.ofInt result1) in
+let _ = TextIO.print "\n   Logs:\n" in
+let _ = TextIO.print (Writer.execString computation1) in
+
+(* Example 2: Traced arithmetic *)
+let _ = TextIO.print "\n2. Traced Arithmetic:\n" in
+let computation2 =
+    Writer.bind (Traced.add 10 5) (fun sum ->
+        Writer.bind (Traced.multiply sum 2) (fun product ->
+            Writer.bind (Traced.subtract product 3) (fun final ->
+                Writer.pure final
+            )
+        )
+    )
+in
+let (result2, _) = Writer.run computation2 in
+let _ = TextIO.print "   Trace:\n" in
+let _ = TextIO.print (Writer.execString computation2) in
+let _ = TextIO.print ("   Final result: " ^ String.ofInt result2 ^ "\n") in
+
+(* Example 3: Logging with multiple messages *)
+let _ = TextIO.print "\n3. Multiple Log Messages:\n" in
+let computation3 =
+    Writer.bind (Writer.tells ["Step 1\n", "Step 2\n", "Step 3\n"]) (fun _ ->
+        Writer.pure "done"
+    )
+in
+let _ = TextIO.print "   Logs:\n" in
+let _ = TextIO.print (Writer.execString computation3) in
+
+(* Example 4: Listen to logs *)
+let _ = TextIO.print "\n4. Listening to Logs:\n" in
+let innerComputation =
+    Writer.bind (Writer.tell "Inner computation\n") (fun _ ->
+        Writer.pure 100
+    )
+in
+let computation4 = Writer.listen innerComputation in
+let ((value, capturedLogs), allLogs) = Writer.run computation4 in
+let logsStr = String.concatList capturedLogs in
+let _ = TextIO.print ("   Value: " ^ String.ofInt value ^ "\n") in
+let _ = TextIO.print ("   Captured logs: " ^ logsStr) in
+
+(* Example 5: Transform logs with censor *)
+let _ = TextIO.print "\n5. Censoring Logs:\n" in
+let originalComputation =
+    Writer.bind (Writer.tell "DEBUG: Starting\n") (fun _ ->
+        Writer.bind (Writer.tell "INFO: Processing\n") (fun _ ->
+            Writer.bind (Writer.tell "DEBUG: Details\n") (fun _ ->
+                Writer.pure 42
+            )
+        )
+    )
+in
+let filterDebug = fun logs ->
+    List.filter (fun log -> not (String.startsWith "DEBUG" log)) logs
+in
+let censored = Writer.censor filterDebug originalComputation in
+let _ = TextIO.print "   Original logs:\n" in
+let _ = TextIO.print (Writer.execString originalComputation) in
+let _ = TextIO.print "   Filtered logs (DEBUG removed):\n" in
+let _ = TextIO.print (Writer.execString censored) in
+
+(* Example 6: Sequence with logging *)
+let _ = TextIO.print "\n6. Sequencing Logged Computations:\n" in
+let loggedDouble = fun n ->
+    Writer.bind (Writer.tell ("Doubling " ^ String.ofInt n ^ "\n")) (fun _ ->
+        Writer.pure (n * 2)
+    )
+in
+let computation6 = Writer.sequence (List.map loggedDouble [1, 2, 3, 4, 5]) in
+let (results, _) = Writer.run computation6 in
+let resultsStr = String.concatList (List.map (fun n -> String.ofInt n ^ " ") results) in
+let _ = TextIO.print "   Logs:\n" in
+let _ = TextIO.print (Writer.execString computation6) in
+let _ = TextIO.print ("   Results: [" ^ resultsStr ^ "]\n") in
+
+(* Example 7: Complex traced computation *)
+let _ = TextIO.print "\n7. Complex Traced Computation:\n" in
+let factorial = fun n ->
+    let rec helper = fun acc -> fun k ->
+        if k <= 1 then
+            Writer.bind (Writer.tell ("factorial(" ^ String.ofInt n ^ ") = " ^ String.ofInt acc ^ "\n")) (fun _ ->
+                Writer.pure acc
+            )
+        else
+            Writer.bind (Writer.tell ("  " ^ String.ofInt acc ^ " * " ^ String.ofInt k ^ " = " ^ String.ofInt (acc * k) ^ "\n")) (fun _ ->
+                helper (acc * k) (k - 1)
+            )
+    in
+    Writer.bind (Writer.tell ("Computing factorial(" ^ String.ofInt n ^ "):\n")) (fun _ ->
+        helper 1 n
+    )
+in
+let computation7 = factorial 5 in
+let (result7, _) = Writer.run computation7 in
+let _ = TextIO.print (Writer.execString computation7) in
+
+TextIO.print "\n=== Writer Monad Demo Complete ===\n"

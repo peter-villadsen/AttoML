@@ -139,6 +139,7 @@ structure M = {
     match x with
         0 -> true
       | _ -> false
+    end
 }
 open M
 isZero 0

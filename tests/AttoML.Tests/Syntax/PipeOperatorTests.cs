@@ -150,7 +150,7 @@ namespace AttoML.Tests.Syntax
         public void PipeOperator_WithTuple_Works()
         {
             var (_, ev, _, _, expr, _) = CompileAndInitializeFull(@"
-                (3, 4) |> (fun p -> case p of (a, b) -> a + b)
+                (3, 4) |> (fun p -> match p with (a, b) -> a + b end)
             ");
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var result = Assert.IsType<IntVal>(v);

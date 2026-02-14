@@ -29,9 +29,9 @@ let line1 = TextIO.inputLine inFile2 in
 let line2 = TextIO.inputLine inFile2 in
 let line3 = TextIO.inputLine inFile2 in
 let _ = TextIO.closeIn inFile2 in
-let _ = case line1 of Some l -> TextIO.print ("   " ^ l) | None -> () in
-let _ = case line2 of Some l -> TextIO.print ("   " ^ l) | None -> () in
-let _ = case line3 of Some l -> TextIO.print ("   " ^ l) | None -> () in
+let _ = match line1 with Some l -> TextIO.print ("   " ^ l) | None -> () end in
+let _ = match line2 with Some l -> TextIO.print ("   " ^ l) | None -> () end in
+let _ = match line3 with Some l -> TextIO.print ("   " ^ l) | None -> () end in
 let _ = TextIO.print "\n" in
 
 (* Append to the file *)

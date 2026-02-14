@@ -1,0 +1,112 @@
+(* Parser Monad Examples - Demonstrating composable parsing *)
+
+let _ = TextIO.print "=== Parser Monad Demo ===\n\n" in
+
+(* Example 1: Basic character parsing *)
+let _ = TextIO.print "1. Basic Parsing:\n" in
+let result1 = Parser.run (Parser.char 'a') "abc" in
+let _ = match result1 with
+    Some (c, rest) -> TextIO.print ("   Parsed '" ^ c ^ "', remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 2: Sequencing with bind *)
+let _ = TextIO.print "\n2. Sequencing Parsers (bind):\n" in
+let twoChars =
+    Parser.bind (Parser.char 'h') (fun c1 ->
+        Parser.bind (Parser.char 'i') (fun c2 ->
+            Parser.pure (c1, c2)
+        )
+    )
+in
+let result2 = Parser.run twoChars "hi there" in
+let _ = match result2 with
+    Some ((c1, c2), rest) ->
+        TextIO.print ("   Parsed ('" ^ c1 ^ "', '" ^ c2 ^ "'), remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 3: Choice (orElse) *)
+let _ = TextIO.print "\n3. Choice Between Parsers:\n" in
+let aOrB = Parser.orElse (Parser.char 'a') (Parser.char 'b') in
+let result3a = Parser.run aOrB "apple" in
+let result3b = Parser.run aOrB "banana" in
+let _ = match result3a with
+    Some (c, rest) -> TextIO.print ("   'apple': Parsed '" ^ c ^ "', remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+let _ = match result3b with
+    Some (c, rest) -> TextIO.print ("   'banana': Parsed '" ^ c ^ "', remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 4: Parsing multiple items (many) *)
+let _ = TextIO.print "\n4. Parsing Multiple Items:\n" in
+let manyDigits = Parser.many Parser.digit in
+let result4 = Parser.run manyDigits "12345abc" in
+let _ = match result4 with
+    Some (digits, rest) ->
+        let digitStr = String.implode digits in
+        TextIO.print ("   Parsed digits: \"" ^ digitStr ^ "\", remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 5: Parsing a number *)
+let _ = TextIO.print "\n5. Parsing Numbers:\n" in
+let result5 = Parser.run Parser.number "42xyz" in
+let _ = match result5 with
+    Some (n, rest) ->
+        TextIO.print ("   Parsed number: " ^ String.ofInt n ^ ", remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 6: Parsing an identifier *)
+let _ = TextIO.print "\n6. Parsing Identifiers:\n" in
+let result6 = Parser.run Parser.identifier "hello123 world" in
+let _ = match result6 with
+    Some (id, rest) ->
+        TextIO.print ("   Parsed identifier: \"" ^ id ^ "\", remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 7: Parsing a list of numbers *)
+let _ = TextIO.print "\n7. Parsing Comma-Separated Numbers:\n" in
+let csvNumbers = Parser.sepBy Parser.number (Parser.char ',') in
+let result7 = Parser.run csvNumbers "1,2,3,4" in
+let _ = match result7 with
+    Some (nums, rest) ->
+        let numStrs = List.map String.ofInt nums in
+        let numsStr = String.concatList (List.map (fun s -> s ^ " ") numStrs) in
+        TextIO.print ("   Parsed numbers: [" ^ numsStr ^ "], remaining: \"" ^ rest ^ "\"\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 8: Complex parser - key=value *)
+let _ = TextIO.print "\n8. Parsing Key-Value Pairs:\n" in
+let keyValue =
+    Parser.bind Parser.identifier (fun key ->
+        Parser.bind (Parser.char '=') (fun _ ->
+            Parser.bind Parser.number (fun value ->
+                Parser.pure (key, value)
+            )
+        )
+    )
+in
+let result8 = Parser.run keyValue "count=42" in
+let _ = match result8 with
+    Some ((key, value), rest) ->
+        TextIO.print ("   Parsed: " ^ key ^ " = " ^ String.ofInt value ^ "\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+(* Example 9: Between delimiters *)
+let _ = TextIO.print "\n9. Parsing Between Brackets:\n" in
+let bracketedNumber = Parser.between (Parser.char '[') (Parser.char ']') Parser.number in
+let result9 = Parser.run bracketedNumber "[123]" in
+let _ = match result9 with
+    Some (n, rest) ->
+        TextIO.print ("   Parsed number in brackets: " ^ String.ofInt n ^ "\n")
+  | None -> TextIO.print ("   Parse failed\n")
+end in
+
+TextIO.print "\n=== Parser Monad Demo Complete ===\n"

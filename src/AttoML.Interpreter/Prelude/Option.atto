@@ -4,53 +4,41 @@
 datatype 'a option = None | Some of 'a
 
 structure Option = {
-    fun isSome opt = case opt of
-        Some _ -> true
-      | None -> false,
+    fun isSome opt = match opt with Some _ -> true
+      | None -> false end,
 
-    fun isNone opt = case opt of
-        Some _ -> false
-      | None -> true,
+    fun isNone opt = match opt with Some _ -> false
+      | None -> true end,
 
-    fun getOr opt default = case opt of
-        Some x -> x
-      | None -> default,
+    fun getOr opt default = match opt with Some x -> x
+      | None -> default end,
 
-    fun map f opt = case opt of
-        Some x -> Some (f x)
-      | None -> None,
+    fun map f opt = match opt with Some x -> Some (f x)
+      | None -> None end,
 
-    fun bind f opt = case opt of
-        Some x -> f x
-      | None -> None,
+    fun bind f opt = match opt with Some x -> f x
+      | None -> None end,
 
-    fun filter pred opt = case opt of
-        Some x -> if pred x then Some x else None
-      | None -> None,
+    fun filter pred opt = match opt with Some x -> if pred x then Some x else None
+      | None -> None end,
 
-    fun fold onSome onNone opt = case opt of
-        Some x -> onSome x
-      | None -> onNone (),
+    fun fold onSome onNone opt = match opt with Some x -> onSome x
+      | None -> onNone () end,
 
-    fun toList opt = case opt of
-        Some x -> [x]
-      | None -> [],
+    fun toList opt = match opt with Some x -> [x]
+      | None -> [] end,
 
-    fun fromList lst = case lst of
-        h::_ -> Some h
-      | [] -> None,
+    fun fromList lst = match lst with h::_ -> Some h
+      | [] -> None end,
 
-    fun orElse opt1 opt2 = case opt1 of
-        Some _ -> opt1
-      | None -> opt2,
+    fun orElse opt1 opt2 = match opt1 with Some _ -> opt1
+      | None -> opt2 end,
 
     fun andThen f opt = bind f opt,
 
-    fun map2 f opt1 opt2 = case opt1 of
-        Some x -> (case opt2 of
-            Some y -> Some (f x y)
-          | None -> None)
-      | None -> None
+    fun map2 f opt1 opt2 = match opt1 with Some x -> (match opt2 with Some y -> Some (f x y)
+          | None -> None end)
+      | None -> None end
 }
 
 (* Example usage with pipe operator (|>):

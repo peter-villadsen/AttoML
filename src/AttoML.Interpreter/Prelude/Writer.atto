@@ -1,0 +1,97 @@
+(* Writer Monad - Accumulate output (logs) alongside computation *)
+(* A writer computation is a value paired with accumulated output *)
+
+(* Writer type: wraps a value with accumulated logs *)
+datatype 'a Writer = Writer of ('a * string list)
+
+structure Writer = {
+    (* ===== Core Monad Operations ===== *)
+
+    (* Run a writer computation and get (result, logs) *)
+    fun run w =
+        match w with Writer pair -> pair end,
+
+    (* Get only the result *)
+    fun eval w =
+        let (result, _) = run w in
+        result,
+
+    (* Get only the logs *)
+    fun exec w =
+        let (_, logs) = run w in
+        logs,
+
+    (* Get logs as a single string *)
+    fun execString w =
+        String.concatList (exec w),
+
+    (* pure/return: Lift a value into Writer with no output *)
+    fun pure x =
+        Writer (x, []),
+
+    (* bind (>>=): Sequence two writer computations, concatenating output *)
+    fun bind w f =
+        match run w with (a, logs1) ->
+                match run (f a) with (b, logs2) -> Writer (b, List.append logs1 logs2) end end,
+
+    (* map (fmap): Transform the result *)
+    fun map f w =
+        bind w (fun x -> pure (f x)),
+
+    (* andThen (>>): Sequence two computations, discarding first result *)
+    fun andThen w1 w2 =
+        bind w1 (fun _ -> w2),
+
+    (* ===== Writer Operations ===== *)
+
+    (* Append a log message *)
+    fun tell msg =
+        Writer ((), [msg]),
+
+    (* Append multiple log messages *)
+    fun tells msgs =
+        Writer ((), msgs),
+
+    (* Run a computation and add a prefix to all its logs *)
+    fun listen w =
+        match run w with (a, logs) -> Writer ((a, logs), logs) end,
+
+    (* Transform the logs *)
+    fun censor f w =
+        match run w with (a, logs) -> Writer (a, f logs) end,
+
+    (* ===== Utility Functions ===== *)
+
+    (* Sequence a list of writer computations *)
+    fun sequence ws =
+        match ws with [] -> pure [] end
+          | w :: rest ->
+              bind w (fun x ->
+                  bind (sequence rest) (fun xs ->
+                      pure (x :: xs)
+                  )
+              ),
+
+    (* Map a writer function over a list *)
+    fun mapM f xs =
+        sequence (List.map f xs)
+}
+
+(* ===== Example: Traced Computations ===== *)
+structure Traced = {
+    (* Trace a computation with a message *)
+    fun trace msg x =
+        Writer.bind (Writer.tell msg) (fun _ ->
+            Writer.pure x
+        ),
+
+    (* Traced arithmetic *)
+    fun add x y =
+        trace ("Adding " ^ String.ofInt x ^ " + " ^ String.ofInt y ^ " = " ^ String.ofInt (x + y) ^ "\n") (x + y),
+
+    fun multiply x y =
+        trace ("Multiplying " ^ String.ofInt x ^ " * " ^ String.ofInt y ^ " = " ^ String.ofInt (x * y) ^ "\n") (x * y),
+
+    fun subtract x y =
+        trace ("Subtracting " ^ String.ofInt x ^ " - " ^ String.ofInt y ^ " = " ^ String.ofInt (x - y) ^ "\n") (x - y)
+}

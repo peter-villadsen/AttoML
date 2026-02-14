@@ -4,78 +4,63 @@ datatype Result = Ok of int | Error of int
 
 structure Result = {
     (* Check if result is Ok *)
-    fun isOk res = case res of
-        Ok _ -> true
-      | Error _ -> false,
+    fun isOk res = match res with Ok _ -> true
+      | Error _ -> false end,
 
     (* Check if result is Error *)
-    fun isError res = case res of
-        Ok _ -> false
-      | Error _ -> true,
+    fun isError res = match res with Ok _ -> false
+      | Error _ -> true end,
 
     (* Get value with default *)
-    fun getOr res default = case res of
-        Ok x -> x
-      | Error _ -> default,
+    fun getOr res default = match res with Ok x -> x
+      | Error _ -> default end,
 
     (* Get error with default *)
-    fun getError res default = case res of
-        Ok _ -> default
-      | Error e -> e,
+    fun getError res default = match res with Ok _ -> default
+      | Error e -> e end,
 
     (* Map over Ok value *)
-    fun map f res = case res of
-        Ok x -> Ok (f x)
-      | Error e -> Error e,
+    fun map f res = match res with Ok x -> Ok (f x)
+      | Error e -> Error e end,
 
     (* Map over Error value *)
-    fun mapError f res = case res of
-        Ok x -> Ok x
-      | Error e -> Error (f e),
+    fun mapError f res = match res with Ok x -> Ok x
+      | Error e -> Error (f e) end,
 
     (* Bind/flatMap for result *)
-    fun bind f res = case res of
-        Ok x -> f x
-      | Error e -> Error e,
+    fun bind f res = match res with Ok x -> f x
+      | Error e -> Error e end,
 
     (* Chain results (alias for bind) *)
     fun andThen f res = bind f res,
 
     (* Provide alternative on Error *)
-    fun orElse res alt = case res of
-        Ok _ -> res
-      | Error _ -> alt,
+    fun orElse res alt = match res with Ok _ -> res
+      | Error _ -> alt end,
 
     (* Fold over result *)
-    fun fold onOk onError res = case res of
-        Ok x -> onOk x
-      | Error e -> onError e,
+    fun fold onOk onError res = match res with Ok x -> onOk x
+      | Error e -> onError e end,
 
     (* Convert Ok to option *)
-    fun toOption res = case res of
-        Ok x -> Some x
-      | Error _ -> None,
+    fun toOption res = match res with Ok x -> Some x
+      | Error _ -> None end,
 
     (* Convert Error to option *)
-    fun errorToOption res = case res of
-        Ok _ -> None
-      | Error e -> Some e,
+    fun errorToOption res = match res with Ok _ -> None
+      | Error e -> Some e end,
 
     (* Combine two results *)
     fun map2 f res1 res2 =
-        case res1 of
-            Ok x -> (case res2 of
-                Ok y -> Ok (f x y)
-              | Error e -> Error e)
-          | Error e -> Error e,
+        match res1 with Ok x -> (match res2 with Ok y -> Ok (f x y)
+              | Error e -> Error e end)
+          | Error e -> Error e end,
 
     (* Return first Error, or Ok if both Ok *)
-    fun andAlso res1 res2 = case res1 of
-        Ok _ -> res2
-      | Error e -> Error e,
+    fun andAlso res1 res2 = match res1 with Ok _ -> res2
+      | Error e -> Error e end,
 
     (* Return first Ok, or last Error if both Error *)
-    fun orElse2 res1 res2 = case res1 of
-        Ok x -> Ok x
-      | Error _ -> res2
+    fun orElse2 res1 res2 = match res1 with Ok x -> Ok x
+      | Error _ -> res2 end
 }

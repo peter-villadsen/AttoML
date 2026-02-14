@@ -1,0 +1,113 @@
+(* State Monad - Thread state through computations without mutation *)
+(* A stateful computation is a function from state to (result, new state) *)
+
+(* State type: wraps a function from state to (result, state) *)
+datatype ('s, 'a) State = State of 's -> ('a * 's)
+
+structure State = {
+    (* ===== Core Monad Operations ===== *)
+
+    (* Run a stateful computation with an initial state *)
+    fun run s initialState =
+        match s with State f -> f initialState end,
+
+    (* Evaluate: run and return only the result *)
+    fun eval s initialState =
+        let (result, _) = run s initialState in
+        result,
+
+    (* Execute: run and return only the final state *)
+    fun exec s initialState =
+        let (_, finalState) = run s initialState in
+        finalState,
+
+    (* pure/return: Lift a value into State without modifying state *)
+    fun pure x =
+        State (fun s -> (x, s)),
+
+    (* bind (>>=): Sequence two stateful computations *)
+    fun bind m f =
+        State (fun s ->
+            let (a, s2) = run m s in
+            let m2 = f a in
+            run m2 s2
+        ),
+
+    (* map (fmap): Transform the result of a stateful computation *)
+    fun map f m =
+        bind m (fun x -> pure (f x)),
+
+    (* andThen (>>): Sequence two computations, discarding first result *)
+    fun andThen m1 m2 =
+        bind m1 (fun _ -> m2),
+
+    (* ===== State Operations ===== *)
+
+    (* Get the current state *)
+    val get =
+        State (fun s -> (s, s)),
+
+    (* Set the state *)
+    fun put s =
+        State (fun _ -> ((), s)),
+
+    (* Modify the state with a function *)
+    fun modify f =
+        State (fun s -> ((), f s)),
+
+    (* Get a specific component of the state *)
+    fun gets f =
+        bind get (fun s -> pure (f s)),
+
+    (* ===== Utility Functions ===== *)
+
+    (* Sequence a list of stateful computations *)
+    fun sequence ms =
+        match ms with [] -> pure [] end
+          | m :: rest ->
+              bind m (fun x ->
+                  bind (sequence rest) (fun xs ->
+                      pure (x :: xs)
+                  )
+              ),
+
+    (* Map a stateful function over a list *)
+    fun mapM f xs =
+        sequence (List.map f xs),
+
+    (* Fold with state *)
+    fun foldM f acc xs =
+        match xs with [] -> pure acc end
+          | x :: rest ->
+              bind (f acc x) (fun acc2 ->
+                  foldM f acc2 rest
+              )
+}
+
+(* ===== Example: Random Number Generator ===== *)
+(* Linear Congruential Generator using state *)
+structure Random = {
+    (* Next random number in range [0, n) *)
+    fun next n =
+        State.bind State.get (fun seed ->
+            let newSeed = (seed * 1103515245 + 12345) mod 2147483647 in
+            State.bind (State.put newSeed) (fun _ ->
+                State.pure (newSeed mod n)
+            )
+        ),
+
+    (* Generate a random integer *)
+    val nextInt = next 1000000,
+
+    (* Generate a random boolean *)
+    val nextBool = State.map (fun n -> n mod 2 = 1) (next 2),
+
+    (* Generate n random numbers *)
+    fun nextN n count =
+        match count with 0 -> State.pure [] end
+          | _ -> State.bind (next n) (fun x ->
+                State.bind (nextN n (count - 1)) (fun xs ->
+                    State.pure (x :: xs)
+                )
+            )
+}

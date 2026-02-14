@@ -11,26 +11,24 @@ structure LaTeX = {
 
   (* Helper: check if expression is a simple atom *)
   fun isAtom e =
-    case e of
-      Expr.Const _ -> true
+    match e with Expr.Const _ -> true
     | Expr.Var _ -> true
     | _ -> false,
 
   (* Helper: check if expression is numeric constant *)
   fun isNumeric e =
-    case e of
-      Expr.Const _ -> true
+    match e with Expr.Const _ -> true
     | _ -> false,
 
   (* Helper: check if expression needs multiplication symbol *)
   fun needsMulSymbol (a, b) =
-    case (a, b) of
-      (Expr.Const _, Expr.Const _) -> true
+    match (a, b) with (Expr.Const _, Expr.Const _) -> true
     | (Expr.Const _, Expr.Var _) -> false      (* 2x *)
     | (Expr.Const _, _) -> true                (* 2(x+1) *)
     | (_, Expr.Const _) -> true                (* x·2 *)
     | (Expr.Var _, Expr.Var _) -> true         (* x·y *)
-    | _ -> true,
+    | _ -> true
+    end,
 
   (* Format float for LaTeX *)
   fun formatFloat r =
@@ -43,8 +41,7 @@ structure LaTeX = {
 
   (* Canonicalize: move constants to the left for readability *)
   fun canonicalize e =
-    case e of
-      Expr.Const r -> Expr.Const r
+    match e with Expr.Const r -> Expr.Const r
     | Expr.Var v -> Expr.Var v
     | Expr.Add (a, b) ->
         let a1 = canonicalize a in
@@ -86,8 +83,7 @@ structure LaTeX = {
 
   (* Convert to LaTeX with precedence *)
   fun toLatexP (e, prec) =
-    case e of
-      Expr.Const r ->
+    match e with Expr.Const r ->
         if r < 0.0 then
           let absStr = formatFloat (0.0 - r) in
           if prec > 1 then paren (String.concat "-" absStr)

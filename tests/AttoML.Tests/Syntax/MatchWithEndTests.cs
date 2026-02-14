@@ -63,9 +63,10 @@ namespace AttoML.Tests.Syntax
             Assert.Equal(15, ((IntVal)v).Value);
         }
 
-        [Fact]
-        public void OldCaseSyntaxStillWorks()
+        [Fact(Skip = "case...of syntax has been removed in favor of match...with...end")]
+        public void OldCaseSyntaxNoLongerSupported()
         {
+            // This syntax is no longer supported. Use match...with...end instead.
             var src = @"
                 type Color = Red | Green | Blue
                 case Red of Red -> 1 | Green -> 2 | Blue -> 3

@@ -22,7 +22,7 @@ namespace AttoML.Tests.Types
         [Fact]
         public void MatchOptionExtractsPayload()
         {
-            var src = "datatype option = NONE | SOME of int\nlet f = fun o -> match o with NONE -> 0 | SOME x -> x in f (SOME 42)";
+            var src = "datatype option = NONE | SOME of int\nlet f = fun o -> match o with NONE -> 0 | SOME x -> x end in f (SOME 42)";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.Equal(42, Assert.IsType<IntVal>(v).Value);
@@ -31,7 +31,7 @@ namespace AttoML.Tests.Types
         [Fact]
         public void NonExhaustiveMatchThrowsOnSOME()
         {
-            var src = "datatype option = NONE | SOME of int\nmatch SOME 1 with NONE -> 0";
+            var src = "datatype option = NONE | SOME of int\nmatch SOME 1 with NONE -> 0 end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             Assert.Throws<Exception>(() => ev.Eval(expr!, ev.GlobalEnv));
         }
@@ -39,7 +39,7 @@ namespace AttoML.Tests.Types
         [Fact]
         public void QualifiedConstructorPatternsWork()
         {
-            var src = "datatype option = NONE | SOME of int\nmatch option.SOME 2 with option.NONE -> 0 | option.SOME x -> x";
+            var src = "datatype option = NONE | SOME of int\nmatch option.SOME 2 with option.NONE -> 0 | option.SOME x -> x end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.Equal(2, Assert.IsType<IntVal>(v).Value);
@@ -51,7 +51,7 @@ namespace AttoML.Tests.Types
             var src = @"datatype option = NONE | SOME of int
 structure Option = {
     let map = fun f -> fun o ->
-        match o with NONE -> NONE | SOME x -> SOME (f x)
+        match o with NONE -> NONE | SOME x -> SOME (f x) end
 }
 let inc = fun x -> x + 1 in Option.map inc (SOME 4)";
             var (_, ev, expr, _) = CompileAndInitialize(src);

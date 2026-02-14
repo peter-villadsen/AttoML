@@ -95,7 +95,7 @@ namespace AttoML.Tests.Advanced
                 let eg0 = EGraph.empty 0 in
                 let (id, eg1) = EGraph.add (eg0, Expr.Const 42.0) in
                 let result = EGraph.extract (eg1, costFn, id) in
-                case result of Expr.Const r -> r | _ -> 0.0");
+                match result with Expr.Const r -> r | _ -> 0.0 end");
             ev.ApplyOpen(decls);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             var floatVal = Assert.IsType<FloatVal>(v);

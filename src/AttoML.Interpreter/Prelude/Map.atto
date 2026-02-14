@@ -22,8 +22,7 @@ structure Map = {
     (* MapImplementation.get returns: [] = not found, [value] = found *)
     (* We convert to: None = not found, Some value = found *)
     fun get key map =
-        case MapImplementation.get key map of
-            [] -> None
+        match MapImplementation.get key map with [] -> None
           | value :: [] -> Some value
-          | _ -> raise (Fail "Map.get: impossible - implementation returned invalid list")
+          | _ -> raise (Fail "Map.get: impossible - implementation returned invalid list") end
 }

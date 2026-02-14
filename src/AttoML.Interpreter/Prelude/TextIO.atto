@@ -23,8 +23,7 @@ structure TextIO = {
     (* TextIOImplementation.inputLine returns: [] = EOF, [line] = data *)
     (* We convert to: None = EOF, Some line = data *)
     fun inputLine stream =
-        case TextIOImplementation.inputLine stream of
-            [] -> None
+        match TextIOImplementation.inputLine stream with [] -> None
           | line :: [] -> Some line
-          | _ -> raise (Fail "TextIO.inputLine: impossible - implementation returned invalid list")
+          | _ -> raise (Fail "TextIO.inputLine: impossible - implementation returned invalid list") end
 }

@@ -7,89 +7,69 @@ datatype OptionString = SomeString of string | NoneString
 datatype OptionBool = SomeBool of bool | NoneBool
 
 structure OptionInt = {
-    fun isSome opt = case opt of
-        SomeInt _ -> true
+    fun isSome opt = match opt with SomeInt _ -> true
       | NoneInt -> false,
 
-    fun isNone opt = case opt of
-        SomeInt _ -> false
+    fun isNone opt = match opt with SomeInt _ -> false
       | NoneInt -> true,
 
-    fun getOr opt default = case opt of
-        SomeInt x -> x
+    fun getOr opt default = match opt with SomeInt x -> x
       | NoneInt -> default,
 
-    fun map f opt = case opt of
-        SomeInt x -> SomeInt (f x)
+    fun map f opt = match opt with SomeInt x -> SomeInt (f x)
       | NoneInt -> NoneInt,
 
-    fun bind f opt = case opt of
-        SomeInt x -> f x
+    fun bind f opt = match opt with SomeInt x -> f x
       | NoneInt -> NoneInt,
 
-    fun toList opt = case opt of
-        SomeInt x -> [x]
+    fun toList opt = match opt with SomeInt x -> [x]
       | NoneInt -> [],
 
-    fun fromList lst = case lst of
-        h::_ -> SomeInt h
-      | [] -> NoneInt
+    fun fromList lst = match lst with h::_ -> SomeInt h
+      | [] -> NoneInt end
 }
 
 structure OptionFloat = {
-    fun isSome opt = case opt of
-        SomeFloat _ -> true
+    fun isSome opt = match opt with SomeFloat _ -> true
       | NoneFloat -> false,
 
-    fun getOr opt default = case opt of
-        SomeFloat x -> x
+    fun getOr opt default = match opt with SomeFloat x -> x
       | NoneFloat -> default,
 
-    fun map f opt = case opt of
-        SomeFloat x -> SomeFloat (f x)
+    fun map f opt = match opt with SomeFloat x -> SomeFloat (f x)
       | NoneFloat -> NoneFloat,
 
-    fun bind f opt = case opt of
-        SomeFloat x -> f x
+    fun bind f opt = match opt with SomeFloat x -> f x
       | NoneFloat -> NoneFloat,
 
-    fun toList opt = case opt of
-        SomeFloat x -> [x]
-      | NoneFloat -> []
+    fun toList opt = match opt with SomeFloat x -> [x]
+      | NoneFloat -> [] end
 }
 
 structure OptionString = {
-    fun isSome opt = case opt of
-        SomeString _ -> true
+    fun isSome opt = match opt with SomeString _ -> true
       | NoneString -> false,
 
-    fun getOr opt default = case opt of
-        SomeString x -> x
+    fun getOr opt default = match opt with SomeString x -> x
       | NoneString -> default,
 
-    fun map f opt = case opt of
-        SomeString x -> SomeString (f x)
+    fun map f opt = match opt with SomeString x -> SomeString (f x)
       | NoneString -> NoneString,
 
-    fun bind f opt = case opt of
-        SomeString x -> f x
+    fun bind f opt = match opt with SomeString x -> f x
       | NoneString -> NoneString,
 
-    fun toList opt = case opt of
-        SomeString x -> [x]
-      | NoneString -> []
+    fun toList opt = match opt with SomeString x -> [x]
+      | NoneString -> [] end
 }
 
 structure OptionBool = {
-    fun isSome opt = case opt of
-        SomeBool _ -> true
+    fun isSome opt = match opt with SomeBool _ -> true
       | NoneBool -> false,
 
-    fun getOr opt default = case opt of
-        SomeBool x -> x
+    fun getOr opt default = match opt with SomeBool x -> x
       | NoneBool -> default,
 
-    fun toList opt = case opt of
-        SomeBool x -> [x]
-      | NoneBool -> []
+    fun toList opt = match opt with SomeBool x -> [x]
+      | NoneBool -> [] end
 }

@@ -3,8 +3,7 @@
 structure LaTeXRewrite = {
   (* Cost model optimized for LaTeX formatting *)
   fun latexCost node =
-    case node of
-      ENode.EConst _ -> 1.0
+    match node with ENode.EConst _ -> 1.0
     | ENode.EVar _ -> 1.0
     | ENode.EDiv _ -> 2.0    (* Prefer \frac over mul/pow *)
     | ENode.EAdd _ -> 3.0

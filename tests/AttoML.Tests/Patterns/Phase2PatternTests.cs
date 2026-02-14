@@ -14,8 +14,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [1, 2, 3] with
-                    h::t => h
-            ";
+                    h::t -> h
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -27,8 +27,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [1, 2, 3] with
-                    h::t => t
-            ";
+                    h::t -> t
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<ListVal>(v);
@@ -43,8 +43,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [1, 2, 3, 4] with
-                    a::b::rest => a + b
-            ";
+                    a::b::rest -> a + b
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -56,9 +56,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [] with
-                    h::t => 1
-                  | [] => 0
-            ";
+                    h::t -> 1
+                  | [] -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -69,10 +69,10 @@ namespace AttoML.Tests.Patterns
         public void ListConsPattern_SingletonList_TailEmpty()
         {
             var src = @"
-                let checkTail = fn t => match t with [] => true | _ => false in
+                let checkTail = fn t -> match t with [] -> true | _ -> false end in
                 match [42] with
-                    h::t => if checkTail t then h else 0
-            ";
+                    h::t -> if checkTail t then h else 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -83,10 +83,10 @@ namespace AttoML.Tests.Patterns
         public void ListConsPattern_TypeInference_Correct()
         {
             var src = @"
-                fn lst => match lst with
-                    h::t => h
-                  | [] => 0
-            ";
+                fn lst -> match lst with
+                    h::t -> h
+                  | [] -> 0
+                end";
             var (_, _, _, type) = CompileAndInitialize(src);
             Assert.IsType<TFun>(type);
             var funTy = (TFun)type!;
@@ -100,9 +100,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [] with
-                    [] => true
-                  | _ => false
-            ";
+                    [] -> true
+                  | _ -> false
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<BoolVal>(v);
@@ -114,9 +114,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [42] with
-                    [x] => x
-                  | _ => 0
-            ";
+                    [x] -> x
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -128,9 +128,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [1, 2] with
-                    [a, b] => a + b
-                  | _ => 0
-            ";
+                    [a, b] -> a + b
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -142,9 +142,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [10, 20, 30] with
-                    [x, y, z] => x + y + z
-                  | _ => 0
-            ";
+                    [x, y, z] -> x + y + z
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -156,9 +156,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [1, 2, 3] with
-                    [a, b] => 1
-                  | _ => 0
-            ";
+                    [a, b] -> 1
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -170,9 +170,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [[1, 2], [3, 4]] with
-                    [[a, b], [c, d]] => a + b + c + d
-                  | _ => 0
-            ";
+                    [[a, b], [c, d]] -> a + b + c + d
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -185,8 +185,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match {x = 10, y = 20} with
-                    {x = a, y = b} => a + b
-            ";
+                    {x = a, y = b} -> a + b
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -202,8 +202,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match {x = 10, y = 20} with
-                    {y = b, x = a} => a - b
-            ";
+                    {y = b, x = a} -> a - b
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -215,8 +215,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match {outer = {inner = 42}} with
-                    {outer = {inner = x}} => x
-            ";
+                    {outer = {inner = x}} -> x
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -228,8 +228,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match {point = (10, 20)} with
-                    {point = (x, y)} => x + y
-            ";
+                    {point = (x, y)} -> x + y
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -241,8 +241,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match {} with
-                    {} => 42
-            ";
+                    {} -> 42
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -255,8 +255,8 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match {data = [1, 2, 3]} with
-                    {data = h::t} => h
-            ";
+                    {data = h::t} -> h
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -268,9 +268,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [{x = 1}, {x = 2}] with
-                    [{x = a}, {x = b}] => a + b
-                  | _ => 0
-            ";
+                    [{x = a}, {x = b}] -> a + b
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -282,9 +282,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match [{x = 1}, {x = 2}, {x = 3}] with
-                    {x = first}::rest => first
-                  | _ => 0
-            ";
+                    {x = first}::rest -> first
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -296,9 +296,9 @@ namespace AttoML.Tests.Patterns
         {
             var src = @"
                 match {coords = [(1, 2), (3, 4)]} with
-                    {coords = [(x1, y1), (x2, y2)]} => x1 + y1 + x2 + y2
-                  | _ => 0
-            ";
+                    {coords = [(x1, y1), (x2, y2)]} -> x1 + y1 + x2 + y2
+                  | _ -> 0
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -313,8 +313,8 @@ namespace AttoML.Tests.Patterns
         public void ListConsPattern_InFunctionBody_Works()
         {
             var src = @"
-                (fn lst => match lst with h::t => h) [1, 2, 3]
-            ";
+                (fn lst -> match lst with h::t -> h end) [1, 2, 3]
+                ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -325,8 +325,8 @@ namespace AttoML.Tests.Patterns
         public void ListLiteralPattern_InFunctionBody_Works()
         {
             var src = @"
-                (fn lst => match lst with [a, b] => a + b) [10, 20]
-            ";
+                (fn lst -> match lst with [a, b] -> a + b end) [10, 20]
+                ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -337,8 +337,8 @@ namespace AttoML.Tests.Patterns
         public void RecordPattern_InFunctionBody_Works()
         {
             var src = @"
-                (fn r => match r with {x = a, y = b} => a * b) {x = 5, y = 6}
-            ";
+                (fn r -> match r with {x = a, y = b} -> a * b end) {x = 5, y = 6}
+                ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -352,8 +352,8 @@ namespace AttoML.Tests.Patterns
         public void ListConsPattern_WithLetAndMatch_Works()
         {
             var src = @"
-                let lst = [1, 2, 3] in match lst with h::t => h
-            ";
+                let lst = [1, 2, 3] in match lst with h::t -> h
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);
@@ -364,8 +364,8 @@ namespace AttoML.Tests.Patterns
         public void RecordPattern_WithLetAndMatch_Works()
         {
             var src = @"
-                let r = {x = 10, y = 20} in match r with {x = a, y = b} => a + b
-            ";
+                let r = {x = 10, y = 20} in match r with {x = a, y = b} -> a + b
+                end";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
             Assert.IsType<IntVal>(v);

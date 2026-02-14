@@ -51,13 +51,14 @@ namespace AttoML.Tests.Syntax
         }
 
         [Fact]
-        public void CaseOfSyntax_SimpleMatch_Works()
+        public void MatchWithEnd_SimpleMatch_Works()
         {
             var src = @"
                 datatype Option = Some of int | None
-                case Some 42 of
-                    Some x => x
-                  | None => 0
+                match Some 42 with
+                    Some x -> x
+                  | None -> 0
+                end
             ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
@@ -66,13 +67,14 @@ namespace AttoML.Tests.Syntax
         }
 
         [Fact]
-        public void CaseOfSyntax_WithArrow_Works()
+        public void MatchWithEnd_WithArrow_Works()
         {
             var src = @"
                 datatype Option = Some of int | None
-                case Some 99 of
+                match Some 99 with
                     Some x -> x
                   | None -> 0
+                end
             ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
@@ -137,6 +139,7 @@ namespace AttoML.Tests.Syntax
                 match Some 42 with
                     Some x -> x
                   | None -> 0
+                end
             ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
@@ -161,7 +164,8 @@ namespace AttoML.Tests.Syntax
                 datatype Option = Some of int | None
                 (fn opt => match opt with
                     Some x -> x * 2
-                  | None -> 0) (Some 21)
+                  | None -> 0
+                end) (Some 21)
             ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
@@ -170,13 +174,14 @@ namespace AttoML.Tests.Syntax
         }
 
         [Fact]
-        public void MixedSyntax_CaseWithFnInBranch_Works()
+        public void MixedSyntax_MatchWithFnInBranch_Works()
         {
             var src = @"
                 datatype Option = Some of int | None
-                case Some 5 of
-                    Some n => (fn x => x + n) 10
-                  | None => 0
+                match Some 5 with
+                    Some n -> (fn x => x + n) 10
+                  | None -> 0
+                end
             ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);
@@ -220,11 +225,11 @@ namespace AttoML.Tests.Syntax
         }
 
         [Fact]
-        public void Parsing_CaseFollowedByExpression_Works()
+        public void Parsing_MatchFollowedByExpression_Works()
         {
             var src = @"
                 datatype Option = Some of int | None
-                (case Some 10 of Some x => x | None => 0) + 5
+                (match Some 10 with Some x -> x | None -> 0 end) + 5
             ";
             var (_, ev, expr, _) = CompileAndInitialize(src);
             var v = ev.Eval(expr!, ev.GlobalEnv);

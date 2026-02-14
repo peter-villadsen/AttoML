@@ -1,0 +1,111 @@
+(* State Monad Examples - Thread state through computations *)
+
+let _ = TextIO.print "=== State Monad Demo ===\n\n" in
+
+(* Example 1: Basic get and put *)
+let _ = TextIO.print "1. Basic State Operations:\n" in
+let computation1 =
+    State.bind State.get (fun s ->
+        State.bind (State.put (s + 10)) (fun _ ->
+            State.bind State.get (fun s2 ->
+                State.pure s2
+            )
+        )
+    )
+in
+let (result1, finalState1) = State.run computation1 5 in
+let _ = TextIO.print ("   Started with 5, added 10, final state: " ^ String.ofInt finalState1 ^ "\n") in
+
+(* Example 2: Modify state *)
+let _ = TextIO.print "\n2. Modifying State:\n" in
+let computation2 =
+    State.bind (State.modify (fun x -> x * 2)) (fun _ ->
+        State.bind State.get (fun s ->
+            State.pure s
+        )
+    )
+in
+let (result2, finalState2) = State.run computation2 7 in
+let _ = TextIO.print ("   Started with 7, doubled it, result: " ^ String.ofInt result2 ^ "\n") in
+
+(* Example 3: Stateful counter *)
+let _ = TextIO.print "\n3. Stateful Counter:\n" in
+let increment = State.bind State.get (fun count ->
+    State.bind (State.put (count + 1)) (fun _ ->
+        State.pure count
+    )
+)
+in
+let threeIncrements =
+    State.bind increment (fun c1 ->
+        State.bind increment (fun c2 ->
+            State.bind increment (fun c3 ->
+                State.pure [c1, c2, c3]
+            )
+        )
+    )
+in
+let (counts, finalCount) = State.run threeIncrements 0 in
+let countStrs = List.map String.ofInt counts in
+let countsStr = String.concatList (List.map (fun s -> s ^ " ") countStrs) in
+let _ = TextIO.print ("   Counter values: [" ^ countsStr ^ "], final: " ^ String.ofInt finalCount ^ "\n") in
+
+(* Example 4: Random number generation *)
+let _ = TextIO.print "\n4. Random Number Generation:\n" in
+let fiveRandoms = Random.nextN 100 5 in
+let randomNums = State.eval fiveRandoms 12345 in
+let randomStrs = List.map String.ofInt randomNums in
+let randomsStr = String.concatList (List.map (fun s -> s ^ " ") randomStrs) in
+let _ = TextIO.print ("   Generated 5 random numbers [0-99]: [" ^ randomsStr ^ "]\n") in
+
+(* Example 5: Simulating dice rolls *)
+let _ = TextIO.print "\n5. Rolling Dice:\n" in
+let rollDie = Random.next 6 in
+let threeDiceRolls =
+    State.bind rollDie (fun d1 ->
+        State.bind rollDie (fun d2 ->
+            State.bind rollDie (fun d3 ->
+                State.pure (d1 + 1, d2 + 1, d3 + 1)
+            )
+        )
+    )
+in
+let (dice, _) = State.run threeDiceRolls 42 in
+let (d1, d2, d3) = dice in
+let total = d1 + d2 + d3 in
+let _ = TextIO.print ("   Rolled: " ^ String.ofInt d1 ^ ", " ^ String.ofInt d2 ^ ", " ^ String.ofInt d3) in
+let _ = TextIO.print (" (total: " ^ String.ofInt total ^ ")\n") in
+
+(* Example 6: Stateful accumulation *)
+let _ = TextIO.print "\n6. Accumulating with State:\n" in
+let addToState n =
+    State.bind State.get (fun total ->
+        State.bind (State.put (total + n)) (fun _ ->
+            State.pure total
+        )
+    )
+in
+let sumList = State.sequence (List.map addToState [1, 2, 3, 4, 5]) in
+let (_, sum) = State.run sumList 0 in
+let _ = TextIO.print ("   Sum of [1,2,3,4,5]: " ^ String.ofInt sum ^ "\n") in
+
+(* Example 7: Fibonacci with memoization using state *)
+let _ = TextIO.print "\n7. Fibonacci Sequence:\n" in
+let nextFib =
+    State.bind State.get (fun pair ->
+        let (a, b) = pair in
+        State.bind (State.put (b, a + b)) (fun _ ->
+            State.pure a
+        )
+    )
+in
+let tenFibs = State.sequence [
+    nextFib, nextFib, nextFib, nextFib, nextFib,
+    nextFib, nextFib, nextFib, nextFib, nextFib
+] in
+let (fibs, _) = State.run tenFibs (0, 1) in
+let fibStrs = List.map String.ofInt fibs in
+let fibsStr = String.concatList (List.map (fun s -> s ^ " ") fibStrs) in
+let _ = TextIO.print ("   First 10 Fibonacci numbers: [" ^ fibsStr ^ "]\n") in
+
+TextIO.print "\n=== State Monad Demo Complete ===\n"
