@@ -70,7 +70,15 @@ namespace AttoML.Core.Modules
                         var ctors = new List<(string, TypeT?)>();
                         foreach (var c in td.Ctors)
                         {
-                            ctors.Add((c.Name, c.PayloadType == null ? null : TypeFromTypeExpr(c.PayloadType, typeParamMap)));
+                            if (c.PayloadType != null)
+                            {
+                                var payloadT = TypeFromTypeExpr(c.PayloadType, typeParamMap);
+                                ctors.Add((c.Name, payloadT));
+                            }
+                            else
+                            {
+                                ctors.Add((c.Name, null));
+                            }
                         }
                         Adts[td.Name] = (td.Name, typeParams, ctors);
                         break;
@@ -99,7 +107,30 @@ namespace AttoML.Core.Modules
                     }
                 }
             }
-                foreach (var s in Structures.Values)
+
+            // CRITICAL FIX: Inject ADT constructors BEFORE processing structures
+            // so that structure bindings can reference constructors like Some/None
+            foreach (var adt in Adts.Values)
+            {
+                // Build parametric ADT type: option<'a>, either<'a,'b>, etc.
+                var adtType = new TAdt(adt.TypeName, adt.TypeParams);
+
+                foreach (var (ctor, payload) in adt.Ctors)
+                {
+                    // Constructor type: payload -> ADT or just ADT
+                    TypeT ctorType = payload == null ? adtType : new TFun(payload, adtType);
+
+                    // Quantify over type parameters to make polymorphic
+                    // e.g., SOME : forall 'a. 'a -> 'a option
+                    //       None : forall 'a. 'a option
+                    var scheme = new Scheme(adt.TypeParams, ctorType);
+
+                    e.Add(ctor, scheme);
+                }
+            }
+
+            // Now process structures with ADT constructors available
+            foreach (var s in Structures.Values)
             {
                 // Check signature if present
                 if (s.SigName != null && Signatures.TryGetValue(s.SigName, out var sig))
@@ -233,25 +264,6 @@ namespace AttoML.Core.Modules
                     }
                 }
             }
-            // Inject ADT constructors with polymorphic types
-            foreach (var adt in Adts.Values)
-            {
-                // Build parametric ADT type: option<'a>, either<'a,'b>, etc.
-                var adtType = new TAdt(adt.TypeName, adt.TypeParams);
-
-                foreach (var (ctor, payload) in adt.Ctors)
-                {
-                    // Constructor type: payload -> ADT or just ADT
-                    TypeT ctorType = payload == null ? adtType : new TFun(payload, adtType);
-
-                    // Quantify over type parameters to make polymorphic
-                    // e.g., SOME : forall 'a. 'a -> 'a option
-                    //       None : forall 'a. 'a option
-                    var scheme = new Scheme(adt.TypeParams, ctorType);
-
-                    e.Add(ctor, scheme);
-                }
-            }
             // Inject Exception constructors (result type exn)
             foreach (var kv in Exceptions)
             {
@@ -305,8 +317,11 @@ namespace AttoML.Core.Modules
                 TypeTuple tt => new TTuple(tt.Items.Select(t => TypeFromTypeExpr(t, typeParamMap)).ToList()),
                 TypeApp tapp => tapp.Constructor switch
                 {
+                    // Special handling for built-in list type (backward compatibility)
                     "list" => new TList(TypeFromTypeExpr(tapp.Base, typeParamMap)),
-                    _ => throw new Exception($"Unknown type constructor: {tapp.Constructor}")
+                    // All other type constructors are treated as parametric ADTs
+                    // This includes: option, result, map, set, and user-defined types
+                    _ => new TAdt(tapp.Constructor, new[] { TypeFromTypeExpr(tapp.Base, typeParamMap) })
                 },
                 _ => throw new Exception("Unknown type expr")
             };

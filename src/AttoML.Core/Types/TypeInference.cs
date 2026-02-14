@@ -454,6 +454,12 @@ namespace AttoML.Core.Types
             var map = new Dictionary<int, TVar>();
             Type Inst(Type t)
             {
+                if (t is TAdt ta)
+                {
+                    var newArgs = ta.TypeArgs.Select(Inst).ToList();
+                    return new TAdt(ta.Name, newArgs);
+                }
+
                 return t switch
                 {
                     TVar v =>
@@ -465,7 +471,6 @@ namespace AttoML.Core.Types
                     TSet ts => new TSet(Inst(ts.Elem)),
                     TMap tm => new TMap(Inst(tm.Key), Inst(tm.Value)),
                     TRecord tr => new TRecord(tr.Fields.ToDictionary(kv => kv.Key, kv => Inst(kv.Value))),
-                    TAdt ta => new TAdt(ta.Name, ta.TypeArgs.Select(Inst).ToList()),
                     _ => t
                 };
             }

@@ -50,7 +50,13 @@ namespace AttoML.Core.Types
         public Type From { get; }
         public Type To { get; }
         public TFun(Type from, Type to){ From=from; To=to; }
-        public override string ToString() => $"{From} -> {To}";
+        public override string ToString()
+        {
+            // Add parentheses around the From type if it's a function type
+            // to correctly represent (A -> B) -> C vs A -> (B -> C)
+            var fromStr = From is TFun ? $"({From})" : From.ToString();
+            return $"{fromStr} -> {To}";
+        }
     }
 
     public sealed class TTuple : Type

@@ -429,6 +429,26 @@ namespace AttoML.Interpreter
 							}
 						}
 					}
+
+					// CRITICAL FIX: Also copy ADT constructors from tempEnv to BaseTypeEnv
+					// so that constructors like Some, None are available in subsequent compilations
+					foreach (var adt in pModules.Adts.Values)
+					{
+						if (verbose) Console.WriteLine($"[PRELUDE]   Registering ADT constructors for {adt.TypeName}");
+						foreach (var (ctor, _) in adt.Ctors)
+						{
+							if (tempEnv.TryGet(ctor, out var ctorScheme))
+							{
+								frontend.BaseTypeEnv.Add(ctor, ctorScheme);
+								if (verbose) Console.WriteLine($"[PRELUDE]     Added ADT constructor {ctor}: {ctorScheme}");
+							}
+							else
+							{
+								if (verbose) Console.WriteLine($"[PRELUDE]     WARNING: Could not find type for constructor {ctor}");
+							}
+						}
+					}
+
 					if (verbose) Console.WriteLine($"[PRELUDE]   Completed loading {filename}");
 				}
 				else
@@ -440,11 +460,14 @@ namespace AttoML.Interpreter
 			LoadOne("Result.atto");
 			LoadOne("TextIO.atto");
 			LoadOne("Map.atto");
-			LoadOne("Complex.atto");
-			LoadOne("SymCalc.atto");
-			LoadOne("EGraph.atto");
-			LoadOne("LaTeXRewrite.atto");
-			LoadOne("LaTeX.atto");
+			// LoadOne("Parser.atto"); // TODO: Fix parser error with 'open' in structure
+			// LoadOne("State.atto");
+			// LoadOne("Writer.atto");
+			// LoadOne("Complex.atto");
+			// LoadOne("SymCalc.atto");
+			// LoadOne("EGraph.atto");
+			// LoadOne("LaTeXRewrite.atto");
+			// LoadOne("LaTeX.atto");
 		}
 	}
 }

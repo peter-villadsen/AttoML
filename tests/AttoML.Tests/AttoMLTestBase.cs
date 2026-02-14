@@ -87,6 +87,18 @@ namespace AttoML.Tests
             {
                 ev.GlobalEnv.Set($"MapImplementation.{kv.Key}", kv.Value);
             }
+            var textIOImplMod = AttoML.Interpreter.Builtins.TextIOImplementationModule.Build();
+            ev.Modules["TextIOImplementation"] = textIOImplMod;
+            foreach (var kv in textIOImplMod.Members)
+            {
+                ev.GlobalEnv.Set($"TextIOImplementation.{kv.Key}", kv.Value);
+            }
+            var httpMod = AttoML.Interpreter.Builtins.HttpModule.Build();
+            ev.Modules["Http"] = httpMod;
+            foreach (var kv in httpMod.Members)
+            {
+                ev.GlobalEnv.Set($"Http.{kv.Key}", kv.Value);
+            }
         }
 
         private static void LoadPrelude(Frontend frontend, Evaluator evaluator)
@@ -116,6 +128,18 @@ namespace AttoML.Tests
                         if (tempEnv.TryGet(qname, out var scheme))
                         {
                             frontend.BaseTypeEnv.Add(qname, scheme);
+                        }
+                    }
+                }
+
+                // CRITICAL FIX: Also copy ADT constructors from tempEnv to BaseTypeEnv
+                foreach (var adt in pMods.Adts.Values)
+                {
+                    foreach (var (ctor, _) in adt.Ctors)
+                    {
+                        if (tempEnv.TryGet(ctor, out var ctorScheme))
+                        {
+                            frontend.BaseTypeEnv.Add(ctor, ctorScheme);
                         }
                     }
                 }

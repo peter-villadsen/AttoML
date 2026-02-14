@@ -1,44 +1,55 @@
-(* HTTP Module Demo *)
+(* HTTP Module Demonstration *)
 
-let _ = TextIO.print "=== HTTP Module Demonstration ===\n\n" in
-
-(* Helper function to show first N chars or entire string if shorter *)
-let showPreview = fun s -> fun n ->
-  let len = String.size s in
-  if len <= n then
-    s
-  else
-    String.substring s 0 n ^ "..."
-in
+(* NOTE: These examples require internet connectivity *)
+(* Uncomment the examples you want to try *)
 
 (* 1. Simple GET request *)
-let _ = TextIO.print "1. Making HTTP GET request to httpbin.org...\n" in
-let response = Http.get "https://httpbin.org/get" in
-let _ = TextIO.print ("   Response size: " ^ String.ofInt (String.size response) ^ " chars\n") in
-let _ = TextIO.print "   Response preview:\n" in
-let _ = TextIO.print ("   " ^ showPreview response 150 ^ "\n\n") in
+(*
+val response = Http.get "https://httpbin.org/get"
+val _ = TextIO.print "GET response:\n"
+val _ = TextIO.print response
+val _ = TextIO.print "\n\n"
+*)
 
-(* 2. POST request *)
-let _ = TextIO.print "2. Making HTTP POST request...\n" in
-let postResponse = Http.post "https://httpbin.org/post" "test data from AttoML" in
-let _ = TextIO.print ("   Response size: " ^ String.ofInt (String.size postResponse) ^ " chars\n") in
-let _ = TextIO.print "   Response preview:\n" in
-let _ = TextIO.print ("   " ^ showPreview postResponse 150 ^ "\n\n") in
+(* 2. POST request with body *)
+(*
+val postResponse = Http.post ("https://httpbin.org/post", "test data")
+val _ = TextIO.print "POST response:\n"
+val _ = TextIO.print postResponse
+val _ = TextIO.print "\n\n"
+*)
 
-(* 3. POST JSON *)
-let _ = TextIO.print "3. Making HTTP POST with JSON...\n" in
-let jsonData = "{\"message\": \"Hello from AttoML\", \"value\": 42}" in
-let jsonResponse = Http.postJson "https://httpbin.org/post" jsonData in
-let _ = TextIO.print ("   Response size: " ^ String.ofInt (String.size jsonResponse) ^ " chars\n") in
-let _ = TextIO.print "   Response preview:\n" in
-let _ = TextIO.print ("   " ^ showPreview jsonResponse 150 ^ "\n\n") in
+(* 3. POST JSON data *)
+(*
+val jsonData = "{\"name\": \"AttoML\", \"version\": \"1.0\"}"
+val jsonResponse = Http.postJson ("https://httpbin.org/post", jsonData)
+val _ = TextIO.print "POST JSON response:\n"
+val _ = TextIO.print jsonResponse
+val _ = TextIO.print "\n\n"
+*)
 
 (* 4. GET with custom headers *)
-let _ = TextIO.print "4. Making HTTP GET with custom headers...\n" in
-let headers = [("User-Agent", "AttoML/1.0"), ("X-Custom-Header", "test-value")] in
-let headerResponse = Http.getWithHeaders "https://httpbin.org/get" headers in
-let _ = TextIO.print ("   Response size: " ^ String.ofInt (String.size headerResponse) ^ " chars\n") in
-let _ = TextIO.print "   Response preview:\n" in
-let _ = TextIO.print ("   " ^ showPreview headerResponse 150 ^ "\n\n") in
+(*
+val headers = [("User-Agent", "AttoML/1.0"), ("Accept", "application/json")]
+val headerResponse = Http.getWithHeaders ("https://httpbin.org/headers", headers)
+val _ = TextIO.print "GET with headers response:\n"
+val _ = TextIO.print headerResponse
+val _ = TextIO.print "\n"
+*)
 
-TextIO.print "=== All HTTP tests completed successfully! ===\n"
+(* 5. Error handling *)
+(*
+exception Http of string
+
+fun safeGet url =
+    case Http.get url of
+        response -> Some response
+    handle Http msg -> None
+
+val result = safeGet "https://httpbin.org/get"
+val _ = case result of
+    Some resp -> TextIO.print ("Success: " ^ resp ^ "\n")
+  | None -> TextIO.print "Request failed\n"
+*)
+
+val _ = TextIO.print "HTTP module is available. Uncomment examples to try them.\n"

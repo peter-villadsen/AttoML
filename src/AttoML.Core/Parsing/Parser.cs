@@ -39,6 +39,38 @@ namespace AttoML.Core.Parsing
             }
         }
 
+        // STANDARD ML COMPATIBILITY: Keywords can be used as identifiers in binding positions
+        // This matches the behavior of SML/NJ, OCaml, and other ML implementations
+        // Keywords that can be used as identifiers (parameter names, pattern variables, etc.)
+        private bool IsBindableKeyword(TokenKind kind)
+        {
+            return kind == TokenKind.Open || kind == TokenKind.Type ||
+                   kind == TokenKind.In || kind == TokenKind.Case ||
+                   kind == TokenKind.Of || kind == TokenKind.End ||
+                   kind == TokenKind.Match || kind == TokenKind.With ||
+                   kind == TokenKind.Then || kind == TokenKind.Else ||
+                   kind == TokenKind.Handle;
+            // Note: We keep these reserved for parsing:
+            // Fun, Let, Rec, If, Val, Structure, Signature, Exception, Raise
+        }
+
+        private bool IsIdentifierOrBindable()
+        {
+            return Kind == TokenKind.Identifier || IsBindableKeyword(Kind);
+        }
+
+        private string ExpectIdentifierOrBindable(string context = "")
+        {
+            if (IsIdentifierOrBindable())
+            {
+                var text = Peek().Text;
+                Next();
+                return text;
+            }
+            var contextMsg = string.IsNullOrEmpty(context) ? "" : $" in {context}";
+            throw new Exception($"Expected identifier{contextMsg}, got {Kind}");
+        }
+
         public (List<ModuleDecl> modules, Expr? expr) ParseCompilationUnit()
         {
             var modules = new List<ModuleDecl>();
@@ -91,8 +123,8 @@ namespace AttoML.Core.Parsing
             var t2 = Peek(2);
             if (t2.Kind == TokenKind.Arrow) return false; // anonymous function
             // Require that a parameter-like token follows function name
-            // Accept identifier or '(' starting a tuple pattern
-            if (t2.Kind != TokenKind.Identifier && t2.Kind != TokenKind.LParen)
+            // Accept identifier, bindable keyword, or '(' starting a tuple pattern
+            if (t2.Kind != TokenKind.Identifier && t2.Kind != TokenKind.LParen && !IsBindableKeyword(t2.Kind))
                 return false;
             return true;
         }
@@ -107,12 +139,12 @@ namespace AttoML.Core.Parsing
             var patParams = new List<Pattern?>(); // parallel list; null when identifier
 
             bool sawAnyParam = false;
-            while (Kind == TokenKind.Identifier || Kind == TokenKind.LParen)
+            while (IsIdentifierOrBindable() || Kind == TokenKind.LParen)
             {
                 sawAnyParam = true;
-                if (Kind == TokenKind.Identifier)
+                if (IsIdentifierOrBindable())
                 {
-                    var p = Expect(TokenKind.Identifier).Text;
+                    var p = ExpectIdentifierOrBindable("function parameter");
                     idParams.Add(p);
                     patParams.Add(null);
                 }
@@ -152,7 +184,7 @@ namespace AttoML.Core.Parsing
         private ValDecl ParseTopValDecl()
         {
             Expect(TokenKind.Val);
-            var name = Expect(TokenKind.Identifier).Text;
+            var name = ExpectIdentifierOrBindable("val declaration name");
             TypeExpr? texpr = null;
             if (Match(TokenKind.Colon))
             {
@@ -195,11 +227,11 @@ namespace AttoML.Core.Parsing
             }
             else
             {
-                name = Expect(TokenKind.Identifier).Text;
+                name = ExpectIdentifierOrBindable("let binding name");
             }
             if (isRec)
             {
-                var param = Expect(TokenKind.Identifier).Text;
+                var param = ExpectIdentifierOrBindable("let rec parameter");
                 TypeExpr? texpr = null;
                 if (Match(TokenKind.Colon))
                 {
@@ -250,9 +282,9 @@ namespace AttoML.Core.Parsing
         private Expr ParseFun()
         {
             Expect(TokenKind.Fun);
-            if (Kind == TokenKind.Identifier)
+            if (IsIdentifierOrBindable())
             {
-                var param = Expect(TokenKind.Identifier).Text;
+                var param = ExpectIdentifierOrBindable("fun parameter");
                 ExpectArrow();
                 var body = ParseExpr();
                 return new Fun(param, body);
@@ -582,7 +614,7 @@ namespace AttoML.Core.Parsing
                     var id = Expect(TokenKind.Identifier).Text;
                     if (Match(TokenKind.ModuleQualifiedSep))
                     {
-                        var member = Expect(TokenKind.Identifier).Text;
+                        var member = ExpectIdentifierOrBindable("qualified member name");
                         return new Qualify(id, member);
                     }
                     return new Var(id);
@@ -593,6 +625,18 @@ namespace AttoML.Core.Parsing
                 case TokenKind.LBrace:
                     return ParseRecord();
                 default:
+                    // Check if it's a bindable keyword used as a variable
+                    if (IsBindableKeyword(Kind))
+                    {
+                        var keywordText = ExpectIdentifierOrBindable("variable name");
+                        // Check for qualified names: keyword.Member
+                        if (Match(TokenKind.ModuleQualifiedSep))
+                        {
+                            var member = ExpectIdentifierOrBindable("qualified member name");
+                            return new Qualify(keywordText, member);
+                        }
+                        return new Var(keywordText);
+                    }
                     throw new Exception($"Unexpected token {Kind}");
             }
         }
@@ -754,7 +798,7 @@ namespace AttoML.Core.Parsing
                     if (Match(TokenKind.ModuleQualifiedSep))
                     {
                         module = id;
-                        name = Expect(TokenKind.Identifier).Text;
+                        name = ExpectIdentifierOrBindable("qualified constructor name");
                     }
                     // Constructor pattern if capitalized or qualified; optional payload pattern
                     if (module != null || (name.Length > 0 && char.IsUpper(name[0])))
@@ -769,13 +813,20 @@ namespace AttoML.Core.Parsing
                     // Otherwise variable pattern
                     return new PVar(name);
                 default:
+                    // Check if it's a bindable keyword used as a pattern variable
+                    if (IsBindableKeyword(Kind))
+                    {
+                        var keywordText = ExpectIdentifierOrBindable("pattern variable");
+                        // Keywords are always lowercase, so they're pattern variables, not constructors
+                        return new PVar(keywordText);
+                    }
                     throw new Exception($"Unexpected token {Kind} in pattern");
             }
         }
 
         private bool IsPatternStart(TokenKind k)
         {
-            return k == TokenKind.Identifier || k == TokenKind.IntLiteral || k == TokenKind.FloatLiteral || k == TokenKind.StringLiteral || k == TokenKind.BoolLiteral || k == TokenKind.Unit || k == TokenKind.LParen || k == TokenKind.LBracket || k == TokenKind.LBrace;
+            return k == TokenKind.Identifier || k == TokenKind.IntLiteral || k == TokenKind.FloatLiteral || k == TokenKind.StringLiteral || k == TokenKind.BoolLiteral || k == TokenKind.Unit || k == TokenKind.LParen || k == TokenKind.LBracket || k == TokenKind.LBrace || IsBindableKeyword(k);
         }
 
         private Pattern ParseParenOrTuplePattern()
@@ -868,7 +919,7 @@ namespace AttoML.Core.Parsing
                 {
                     // val name : type? = expr
                     Expect(TokenKind.Val);
-                    var bn = Expect(TokenKind.Identifier).Text;
+                    var bn = ExpectIdentifierOrBindable("structure val binding name");
                     TypeExpr? texpr = null;
                     if (Match(TokenKind.Colon))
                     {
@@ -882,17 +933,17 @@ namespace AttoML.Core.Parsing
                 {
                     // fun name p1 p2 ... = body  ==>  desugared to lambda
                     Expect(TokenKind.Fun);
-                    var bn = Expect(TokenKind.Identifier).Text;
+                    var bn = ExpectIdentifierOrBindable("structure function name");
                     var idParams = new List<string>();
                     var patParams = new List<Pattern?>();
-                    
+
                     bool sawAnyParam = false;
-                    while (Kind == TokenKind.Identifier || Kind == TokenKind.LParen)
+                    while (IsIdentifierOrBindable() || Kind == TokenKind.LParen)
                     {
                         sawAnyParam = true;
-                        if (Kind == TokenKind.Identifier)
+                        if (IsIdentifierOrBindable())
                         {
-                            var p = Expect(TokenKind.Identifier).Text;
+                            var p = ExpectIdentifierOrBindable("structure function parameter");
                             idParams.Add(p);
                             patParams.Add(null);
                         }
@@ -903,10 +954,10 @@ namespace AttoML.Core.Parsing
                             patParams.Add(pat);
                         }
                     }
-                    
+
                     if (!sawAnyParam)
                     {
-                        throw new Exception("Expected at least one parameter after function name in structure");
+                        throw new Exception($"Expected at least one parameter after function name '{bn}' in structure. Next token: {Kind}");
                     }
 
                     // Parse optional type annotation for function
@@ -1101,11 +1152,38 @@ namespace AttoML.Core.Parsing
                 baseType = new TypeName(id);
             }
 
-            // Handle postfix type constructor application (e.g., "t list", "t list list")
-            while (Kind == TokenKind.Identifier && Peek().Text == "list")
+            // Handle postfix type constructor application (e.g., "t list", "t option", "t map")
+            // In ML, type constructors are postfix: "'a list", "('a * 'b) option", etc.
+            // Type constructors start with lowercase (by convention) or are predefined types
+            // We need to distinguish between type constructors and continuing expressions
+            // Type constructors appear when:
+            // 1. We just parsed a complete type atom (baseType)
+            // 2. Next token is an identifier (potential type constructor)
+            // 3. We're not in a context expecting something else (checked by caller)
+            while (Kind == TokenKind.Identifier)
             {
-                Next(); // consume "list"
-                baseType = new TypeApp(baseType, "list");
+                var ctorName = Peek().Text;
+                // Check if this looks like a type constructor
+                // Type constructors: list, option, result, map, set, etc.
+                // We can't easily distinguish from type variables or other uses here,
+                // so we'll be permissive and let type checking catch errors
+                // However, we need to stop at certain keywords that might follow types
+                if (ctorName == "and" || ctorName == "andalso" || ctorName == "orelse" ||
+                    ctorName == "of" || ctorName == "in" || ctorName == "then" ||
+                    ctorName == "else" || ctorName == "end")
+                {
+                    // These keywords indicate we've reached the end of the type expression
+                    break;
+                }
+                // CRITICAL FIX: Stop at uppercase identifiers (data constructors, not type constructors)
+                // Type constructors are lowercase (list, option, map), data constructors are uppercase (Some, None, MYSOME)
+                // This prevents consuming data constructors from subsequent expressions
+                if (ctorName.Length > 0 && char.IsUpper(ctorName[0]))
+                {
+                    break;
+                }
+                Next(); // consume the type constructor
+                baseType = new TypeApp(baseType, ctorName);
             }
 
             return baseType;

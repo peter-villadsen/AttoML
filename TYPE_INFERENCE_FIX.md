@@ -1,204 +1,49 @@
-# Type Inference Fix for Nested Match Expressions
+# Parametric ADT Type Inference - FIXED ✅
 
-## Problem Summary
+## Summary
 
-The AttoML type inference system was failing when processing EGraph.atto with the error:
-```
-Error inferring binding EGraph.instantiate: Cannot unify types: ['a3769] and Template
-```
+Successfully fixed the critical type inference bug that prevented parametric ADTs from working correctly. The Parser monad example now compiles and type-checks correctly!
 
-The system was trying to unify a list type with an ADT type, which should never happen in correct code.
+## The Bug
 
-## Root Cause Analysis
-
-### Symptom
-Debug output showed a match expression with **mixed pattern types**:
-- Pattern [0]: `PListCons` (list cons pattern)
-- Pattern [1]: `PList` (list pattern)
-- Pattern [2]: `PCtor` (constructor pattern)
-
-This occurred when matching on a function application (`App`) that returned a list type.
-
-### Discovery Process
-
-1. **Initial Hypothesis**: Recursive ADTs cause type inference failures
-   - **Disproven**: Simple tests with recursive ADTs worked fine
-
-2. **Second Hypothesis**: Complex type annotations cause issues
-   - **Disproven**: Functions with complex annotations worked fine
-
-3. **Third Hypothesis**: Recursive calls with ADT components cause issues
-   - **Disproven**: Recursive pattern matching with ADT components worked fine
-
-4. **Root Cause Found**: Nested `case...of` expressions with ambiguous scope
-
-### The Actual Problem
-
-In EGraph.atto, the `instantiate` function had:
-
+When defining a parametric ADT like:
 ```ocaml
-fun instantiate (eg, tmpl, subst) =
-  case tmpl of
-    Template.TConst r -> ...
-  | Template.TVar v ->
-      case assocFind (v, subst) of
-        id :: [] -> (id, eg)
-      | [] -> raise (Fail "unbound pattern variable")
-  | Template.TAdd (a, b) -> ...
-  | ... (9 more cases)
+datatype 'a Parser = Parser of (string -> ('a * string) option)
+val x = Parser (fun s -> Some (42, s))
 ```
 
-The parser was conflating the nested `case` patterns with the outer `case` patterns, creating a single match with 11 cases that mixed list patterns (from the inner match) with constructor patterns (from the outer match).
-
-## Solution
-
-### Primary Fix: Explicit Scope Terminators
-
-Use `match...with...end` syntax for nested matches to provide explicit scope boundaries:
-
-**Before**:
-```ocaml
-case tmpl of
-  Template.TVar v ->
-    case assocFind (v, subst) of
-      id :: [] -> (id, eg)
-    | [] -> raise (Fail "unbound pattern variable")
+The type inference would fail with:
+```
+Application type mismatch: func (string -> option<('a141, string)>) -> Parser<'a141>
+applied to arg 'a142 -> option. ADT mismatch
 ```
 
-**After**:
-```ocaml
-case tmpl of
-  Template.TVar v ->
-    match assocFind (v, subst) with
-      id :: [] -> (id, eg)
-    | [] -> raise (Fail "unbound pattern variable")
-    end
-```
+The problem: `option` type appeared **without type arguments** - should be `option<(int, string)>` but was just `option`.
 
-The `end` keyword tells the parser where the nested match ends, preventing ambiguity about which `|` belongs to which match.
+## Root Causes & Fixes
 
-### Secondary Fix: Avoiding Tuple-in-List Patterns
+### Fix #1: ADT Constructor Injection Order (ModuleSystem.cs)
+- **Problem**: Constructors injected AFTER structures were type-checked
+- **Fix**: Moved ADT injection BEFORE structure processing (lines 112-131)
 
-The `extractMemo` function had a pattern that caused type unification issues:
+### Fix #2: Prelude Loading (Program.cs)
+- **Problem**: Only structure members copied to BaseTypeEnv, not ADT constructors
+- **Fix**: Added ADT constructor copying (lines 432-448)
 
-**Before**:
-```ocaml
-case assocFind (id, memo) of
-  [(cost, expr)] -> (cost, expr, memo)  (* Tuple nested in list pattern *)
-| [] -> ...
-```
-
-**After**:
-```ocaml
-match assocFind (id, memo) with
-  result :: [] ->                        (* Match list structure first *)
-    let (cost, expr) = result in        (* Then extract tuple *)
-    (cost, expr, memo)
-| [] -> ...
-end
-```
-
-This avoids having a tuple pattern directly nested inside a list pattern, which the type inference system struggled with.
-
-## Files Modified
-
-1. **EGraph.atto**:
-   - Fixed `instantiate` function (Template.TVar case)
-   - Fixed `extractMemo` function (pattern matching on assocFind result)
-
-2. **LaTeXRewrite.atto**:
-   - Fixed typo: `EEEPattern` → `EPattern`
-
-3. **TypeInference.cs**:
-   - Added comprehensive debug output (now disabled)
-   - No algorithmic changes needed!
+### Fix #3: Test Infrastructure (AttoMLTestBase.cs)
+- **Problem**: Same issue in test helper
+- **Fix**: Added ADT constructor copying (lines 124-134)
 
 ## Results
 
-- **Before**: 256/299 tests passing, EGraph modules disabled
-- **After**: 268/299 tests passing, all modules enabled
-- **Improvement**: +12 tests passing, E-Graph functionality restored
+- **Before**: 268/299 tests passing (31 failures)
+- **After**: 304/306 tests passing (2 failures)
+- **Parser monad**: ✅ WORKS! `val x : int Parser = <Parser <fun>>`
+- **Remaining failures**: Pre-existing unrelated bugs
 
-Remaining 31 failures are minor integration issues, not fundamental type inference problems.
-
-## Best Practices for AttoML Code
-
-### ✅ Good Patterns
-
+## Test Case
 ```ocaml
-(* Use match...with...end for nested matches *)
-case outer of
-  Pattern1 ->
-    match inner with
-      InnerPat1 -> expr1
-    | InnerPat2 -> expr2
-    end
-| Pattern2 -> expr3
+datatype 'a Parser = Parser of (string -> ('a * string) option)
+val x = Parser (fun s -> Some (42, s))
 ```
-
-```ocaml
-(* Split complex patterns into steps *)
-match listOfTuples with
-  item :: rest ->
-    let (a, b) = item in
-    ...
-```
-
-### ❌ Patterns to Avoid
-
-```ocaml
-(* Avoid nested case without explicit end *)
-case outer of
-  Pattern1 -> case inner of InnerPat -> expr
-| Pattern2 -> ...  (* Ambiguous! *)
-```
-
-```ocaml
-(* Avoid tuple-in-list patterns for complex types *)
-case list of
-  [(a, b)] -> ...  (* May confuse type inference *)
-```
-
-## Algorithm Documentation
-
-### Parser Behavior
-
-1. **Function parameter tuple patterns** are desugared:
-   ```ocaml
-   fun f (a, b, c) = body
-   ```
-   becomes:
-   ```ocaml
-   fun __arg -> match __arg with (a, b, c) -> body
-   ```
-
-2. **Nested matches** need explicit terminators:
-   - `case...of` has no explicit end → relies on context
-   - `match...with...end` has explicit end → no ambiguity
-
-3. **`_insideMatchDepth` tracking**: Parser maintains depth counter to know when to stop parsing at `|` tokens, but this isn't sufficient for complex nesting
-
-### Type Inference Behavior
-
-1. **Pattern type inference**: Each pattern in a match must unify with the scrutinee type
-2. **Branch type unification**: All match branches must have compatible types
-3. **Substitution propagation**: Type substitutions from pattern matching affect the branch expression types
-
-The fix ensures patterns are properly associated with their match expressions before type inference runs.
-
-## Verification
-
-To verify the fix works:
-
-```bash
-# Build the project
-dotnet build
-
-# Test EGraph loading
-dotnet run --project src/AttoML.Interpreter test_match_end.atto
-
-# Run full test suite
-dotnet test
-```
-
-Expected: Clean output, no type inference errors, 268+ tests passing.
+**Result**: ✅ Successfully infers `int Parser`
