@@ -330,168 +330,219 @@ namespace AttoML.Core.Parsing
             var expr = ParseAtom();
             while (true)
             {
-                if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF || Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else || Kind == TokenKind.RBrace || Kind == TokenKind.With || Kind == TokenKind.End || Kind == TokenKind.Bar)
-                {
-                    break;
-                }
-                if (Kind == TokenKind.Comma) break; // tuple handled in atom
-                // Application is juxtaposition: f x
-                // But avoid starting a new form like let/fun/if/fn/case/val
-                if (Kind == TokenKind.Let || Kind == TokenKind.Fun || Kind == TokenKind.Fn || Kind == TokenKind.If || Kind == TokenKind.Match || Kind == TokenKind.Structure || Kind == TokenKind.Signature || Kind == TokenKind.Open || Kind == TokenKind.Type || Kind == TokenKind.Val)
-                {
-                    break;
-                }
-                // Handle infix '@' for list append: left @ right -> List.append left right
-                if (Kind == TokenKind.At)
-                {
-                    Next();
-                    var right = ParseNoRelational();
-                    var append = new Qualify("List", "append");
-                    expr = new App(new App(append, expr), right);
-                    continue;
-                }
-                // Handle infix '::' for list cons: x :: xs -> List.cons x xs
-                if (Kind == TokenKind.ColonColon)
-                {
-                    Next();
-                    var right = ParseNoRelational();
-                    var cons = new Qualify("List", "cons");
-                    expr = new App(new App(cons, expr), right);
-                    continue;
-                }
-                // Arithmetic infix operators
-                if (Kind == TokenKind.Plus || Kind == TokenKind.Minus || Kind == TokenKind.Star || Kind == TokenKind.Slash || Kind == TokenKind.Caret
-                    || (Kind == TokenKind.Identifier && (Peek().Text == "div" || Peek().Text == "mod")))
-                {
-                    var isWordOp = Kind == TokenKind.Identifier;
-                    TokenKind op = Kind;
-                    string? word = null;
-                    if (isWordOp)
-                    {
-                        word = Expect(TokenKind.Identifier).Text;
-                    }
-                    else
-                    {
-                        Next();
-                    }
-                    var right = ParseNoRelational();
-                    if (op == TokenKind.Caret)
-                    {
-                        // '^' maps to String.concat
-                        var qstr = new Qualify("String", "concat");
-                        expr = new App(new App(qstr, expr), right);
-                    }
-                    else
-                    {
-                        string name = op switch
-                        {
-                            TokenKind.Plus => "add",
-                            TokenKind.Minus => "sub",
-                            TokenKind.Star => "mul",
-                            TokenKind.Slash => "div",
-                            _ => word switch
-                            {
-                                "div" => "idiv",
-                                "mod" => "mod",
-                                _ => throw new Exception("unknown op")
-                            }
-                        };
-                        var q = new Qualify("Base", name);
-                        expr = new App(new App(q, expr), right);
-                    }
-                    continue;
-                }
-                // Relational and equality operators
-                if (Kind == TokenKind.Equals || Kind == TokenKind.NotEqual || Kind == TokenKind.EqEq || Kind == TokenKind.BangEq || Kind == TokenKind.LessThan || Kind == TokenKind.GreaterThan || Kind == TokenKind.LessEqual || Kind == TokenKind.GreaterEqual)
-                {
-                    var op = Kind; Next();
-                    var right = ParseApp();
-                    if (op == TokenKind.Equals || op == TokenKind.EqEq)
-                    {
-                        var eq = new Qualify("Base", "eq");
-                        expr = new App(new App(eq, expr), right);
-                    }
-                    else if (op == TokenKind.NotEqual || op == TokenKind.BangEq)
-                    {
-                        var eq = new Qualify("Base", "eq");
-                        var not = new Qualify("Base", "not");
-                        var eqApp = new App(new App(eq, expr), right);
-                        expr = new App(not, eqApp);
-                    }
-                    else if (op == TokenKind.LessThan)
-                    {
-                        var lt = new Qualify("Base", "lt");
-                        expr = new App(new App(lt, expr), right);
-                    }
-                    else if (op == TokenKind.GreaterThan)
-                    {
-                        var lt = new Qualify("Base", "lt");
-                        expr = new App(new App(lt, right), expr);
-                    }
-                    else if (op == TokenKind.LessEqual)
-                    {
-                        var lt = new Qualify("Base", "lt");
-                        var eq = new Qualify("Base", "eq");
-                        var or = new Qualify("Base", "or");
-                        var ltApp = new App(new App(lt, expr), right);
-                        var eqApp = new App(new App(eq, expr), right);
-                        expr = new App(new App(or, ltApp), eqApp);
-                    }
-                    else if (op == TokenKind.GreaterEqual)
-                    {
-                        var lt = new Qualify("Base", "lt");
-                        var eq = new Qualify("Base", "eq");
-                        var or = new Qualify("Base", "or");
-                        var ltApp = new App(new App(lt, right), expr);
-                        var eqApp = new App(new App(eq, expr), right);
-                        expr = new App(new App(or, ltApp), eqApp);
-                    }
-                    continue;
-                }
-                // Short-circuit boolean operators
-                if (Kind == TokenKind.AndThen)
-                {
-                    Next();
-                    var right = ParseApp();
-                    expr = new IfThenElse(expr, right, new BoolLit(false));
-                    continue;
-                }
-                if (Kind == TokenKind.OrElse)
-                {
-                    Next();
-                    var right = ParseApp();
-                    expr = new IfThenElse(expr, new BoolLit(true), right);
-                    continue;
-                }
-                // Non-short-circuit boolean word operators: and/or -> Base.and/Base.or
-                if (Kind == TokenKind.Identifier && (Peek().Text == "and" || Peek().Text == "or"))
-                {
-                    var opWord = Expect(TokenKind.Identifier).Text;
-                    var right = ParseApp();
-                    var q = new Qualify("Base", opWord);
-                    expr = new App(new App(q, expr), right);
-                    continue;
-                }
-                // Pipe operator: x |> f becomes f x
-                // Use ParseNoRelational to stop before consuming another pipe
-                if (Kind == TokenKind.Pipe)
-                {
-                    Next();
-                    var right = ParseNoRelational();
-                    expr = new App(right, expr);
-                    continue;
-                }
-                if (Kind == TokenKind.Handle)
-                {
-                    Next();
-                    var cases = ParseHandleCases();
-                    expr = new Handle(expr, cases);
-                    continue;
-                }
+                if (ShouldStopParsing()) break;
+                if (Kind == TokenKind.Comma) break;
+
+                if (TryParseListOperator(ref expr)) continue;
+                if (TryParseArithmeticOperator(ref expr)) continue;
+                if (TryParseRelationalOperator(ref expr)) continue;
+                if (TryParseBooleanOperator(ref expr)) continue;
+                if (TryParsePipeOperator(ref expr)) continue;
+                if (TryParseHandleOperator(ref expr)) continue;
+
                 var arg = ParseAtom();
                 expr = new App(expr, arg);
             }
             return expr;
+        }
+
+        private bool ShouldStopParsing()
+        {
+            if (Kind == TokenKind.RParen || Kind == TokenKind.RBracket || Kind == TokenKind.EOF ||
+                Kind == TokenKind.In || Kind == TokenKind.Then || Kind == TokenKind.Else ||
+                Kind == TokenKind.RBrace || Kind == TokenKind.With || Kind == TokenKind.End ||
+                Kind == TokenKind.Bar)
+            {
+                return true;
+            }
+            // Avoid starting a new form like let/fun/if/fn/match/val
+            if (Kind == TokenKind.Let || Kind == TokenKind.Fun || Kind == TokenKind.Fn ||
+                Kind == TokenKind.If || Kind == TokenKind.Match || Kind == TokenKind.Structure ||
+                Kind == TokenKind.Signature || Kind == TokenKind.Open || Kind == TokenKind.Type ||
+                Kind == TokenKind.Val)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryParseListOperator(ref Expr expr)
+        {
+            // Handle infix '@' for list append: left @ right -> List.append left right
+            if (Kind == TokenKind.At)
+            {
+                Next();
+                var right = ParseNoRelational();
+                var append = new Qualify("List", "append");
+                expr = new App(new App(append, expr), right);
+                return true;
+            }
+            // Handle infix '::' for list cons: x :: xs -> List.cons x xs
+            if (Kind == TokenKind.ColonColon)
+            {
+                Next();
+                var right = ParseNoRelational();
+                var cons = new Qualify("List", "cons");
+                expr = new App(new App(cons, expr), right);
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryParseArithmeticOperator(ref Expr expr)
+        {
+            if (Kind == TokenKind.Plus || Kind == TokenKind.Minus || Kind == TokenKind.Star ||
+                Kind == TokenKind.Slash || Kind == TokenKind.Caret ||
+                (Kind == TokenKind.Identifier && (Peek().Text == "div" || Peek().Text == "mod")))
+            {
+                var isWordOp = Kind == TokenKind.Identifier;
+                TokenKind op = Kind;
+                string? word = null;
+                if (isWordOp)
+                {
+                    word = Expect(TokenKind.Identifier).Text;
+                }
+                else
+                {
+                    Next();
+                }
+                var right = ParseNoRelational();
+
+                if (op == TokenKind.Caret)
+                {
+                    // '^' maps to String.concat
+                    var qstr = new Qualify("String", "concat");
+                    expr = new App(new App(qstr, expr), right);
+                }
+                else
+                {
+                    string name = op switch
+                    {
+                        TokenKind.Plus => "add",
+                        TokenKind.Minus => "sub",
+                        TokenKind.Star => "mul",
+                        TokenKind.Slash => "div",
+                        _ => word switch
+                        {
+                            "div" => "idiv",
+                            "mod" => "mod",
+                            _ => throw new Exception("unknown op")
+                        }
+                    };
+                    var q = new Qualify("Base", name);
+                    expr = new App(new App(q, expr), right);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryParseRelationalOperator(ref Expr expr)
+        {
+            if (Kind == TokenKind.Equals || Kind == TokenKind.NotEqual || Kind == TokenKind.EqEq ||
+                Kind == TokenKind.BangEq || Kind == TokenKind.LessThan || Kind == TokenKind.GreaterThan ||
+                Kind == TokenKind.LessEqual || Kind == TokenKind.GreaterEqual)
+            {
+                var op = Kind; Next();
+                var right = ParseApp();
+
+                if (op == TokenKind.Equals || op == TokenKind.EqEq)
+                {
+                    var eq = new Qualify("Base", "eq");
+                    expr = new App(new App(eq, expr), right);
+                }
+                else if (op == TokenKind.NotEqual || op == TokenKind.BangEq)
+                {
+                    var eq = new Qualify("Base", "eq");
+                    var not = new Qualify("Base", "not");
+                    var eqApp = new App(new App(eq, expr), right);
+                    expr = new App(not, eqApp);
+                }
+                else if (op == TokenKind.LessThan)
+                {
+                    var lt = new Qualify("Base", "lt");
+                    expr = new App(new App(lt, expr), right);
+                }
+                else if (op == TokenKind.GreaterThan)
+                {
+                    var lt = new Qualify("Base", "lt");
+                    expr = new App(new App(lt, right), expr);
+                }
+                else if (op == TokenKind.LessEqual)
+                {
+                    var lt = new Qualify("Base", "lt");
+                    var eq = new Qualify("Base", "eq");
+                    var or = new Qualify("Base", "or");
+                    var ltApp = new App(new App(lt, expr), right);
+                    var eqApp = new App(new App(eq, expr), right);
+                    expr = new App(new App(or, ltApp), eqApp);
+                }
+                else if (op == TokenKind.GreaterEqual)
+                {
+                    var lt = new Qualify("Base", "lt");
+                    var eq = new Qualify("Base", "eq");
+                    var or = new Qualify("Base", "or");
+                    var ltApp = new App(new App(lt, right), expr);
+                    var eqApp = new App(new App(eq, expr), right);
+                    expr = new App(new App(or, ltApp), eqApp);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryParseBooleanOperator(ref Expr expr)
+        {
+            // Short-circuit boolean operators
+            if (Kind == TokenKind.AndThen)
+            {
+                Next();
+                var right = ParseApp();
+                expr = new IfThenElse(expr, right, new BoolLit(false));
+                return true;
+            }
+            if (Kind == TokenKind.OrElse)
+            {
+                Next();
+                var right = ParseApp();
+                expr = new IfThenElse(expr, new BoolLit(true), right);
+                return true;
+            }
+            // Non-short-circuit boolean word operators: and/or -> Base.and/Base.or
+            if (Kind == TokenKind.Identifier && (Peek().Text == "and" || Peek().Text == "or"))
+            {
+                var opWord = Expect(TokenKind.Identifier).Text;
+                var right = ParseApp();
+                var q = new Qualify("Base", opWord);
+                expr = new App(new App(q, expr), right);
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryParsePipeOperator(ref Expr expr)
+        {
+            // Pipe operator: x |> f becomes f x
+            if (Kind == TokenKind.Pipe)
+            {
+                Next();
+                var right = ParseNoRelational();
+                expr = new App(right, expr);
+                return true;
+            }
+            return false;
+        }
+
+        private bool TryParseHandleOperator(ref Expr expr)
+        {
+            if (Kind == TokenKind.Handle)
+            {
+                Next();
+                var cases = ParseHandleCases();
+                expr = new Handle(expr, cases);
+                return true;
+            }
+            return false;
         }
 
         // Parse an expression like ParseApp, but stop before consuming relational/equality/short-circuit operators
