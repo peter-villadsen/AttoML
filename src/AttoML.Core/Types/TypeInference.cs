@@ -19,200 +19,234 @@ namespace AttoML.Core.Types
 
         private Type InferExpr(TypeEnv env, Expr expr, Subst subst)
         {
-            switch (expr)
+            return expr switch
             {
-                case IntLit:
-                    return TConst.Int;
-                case FloatLit:
-                    return TConst.Float;
-                case StringLit:
-                    return TConst.String;
-                case BoolLit:
-                    return TConst.Bool;
-                case UnitLit:
-                    return TConst.Unit;
-                case Var v:
-                    if (!env.TryGet(v.Name, out var sch))
-                        throw new Exception($"Unbound variable '{v.Name}'");
-                    return Instantiate(sch);
-                case Fun f:
-                    var tv = FreshVar();
-                    var env2 = env.Clone();
-                    env2.Add(f.Param, new Scheme(Array.Empty<TVar>(), tv));
-                    var bodyT = InferExpr(env2, f.Body, subst);
-                    return new TFun(subst.Apply(tv), bodyT);
-                case App a:
-                    var tFun = InferExpr(env, a.Func, subst);
-                    var tArg = InferExpr(env, a.Arg, subst);
-                    var tRes = FreshVar();
-                    try
-                    {
-                        var s2 = Unify(tFun, new TFun(tArg, tRes));
-                        subst.Compose(s2);
-                        return subst.Apply(tRes);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new Exception($"Application type mismatch: func {tFun} applied to arg {tArg}. {ex.Message}");
-                    }
-                case Let l:
-                    var t1 = InferExpr(env, l.Expr, subst);
-                    if (l.TypeAnn != null)
-                    {
-                        var annTy = Modules.ModuleSystem.TypeFromTypeExpr(l.TypeAnn);
-                        var sAnn = Unify(t1, annTy);
-                        subst.Compose(sAnn);
-                        t1 = subst.Apply(annTy);
-                    }
-                    var gen = Generalize(env, t1);
-                    var env3 = env.Clone();
-                    env3.Add(l.Name, gen);
-                    return InferExpr(env3, l.Body, subst);
-                case LetRec lr:
-                    var tvf = FreshVar();
-                    var env4 = env.Clone();
-                    env4.Add(lr.Name, new Scheme(Array.Empty<TVar>(), tvf));
-                    var tparam = FreshVar();
-                    env4.Add(lr.Param, new Scheme(Array.Empty<TVar>(), tparam));
-                    var tbody = InferExpr(env4, lr.FuncBody, subst);
-                    var s3 = Unify(tvf, new TFun(tparam, tbody));
-                    subst.Compose(s3);
-                    if (lr.TypeAnn != null)
-                    {
-                        var annTy = Modules.ModuleSystem.TypeFromTypeExpr(lr.TypeAnn);
-                        var sAnn = Unify(subst.Apply(tvf), annTy);
-                        subst.Compose(sAnn);
-                        tvf = subst.Apply(annTy) as TVar ?? tvf; // ensure tvf aligns; not strictly needed
-                    }
-                    var env5 = env.Clone();
-                    env5.Add(lr.Name, Generalize(env, subst.Apply(tvf)));
-                    return InferExpr(env5, lr.InBody, subst);
-                case IfThenElse ite:
-                    var tc = InferExpr(env, ite.Cond, subst);
-                    var s4 = Unify(tc, TConst.Bool);
-                    subst.Compose(s4);
-                    var tt = InferExpr(env, ite.Then, subst);
-                    var te = InferExpr(env, ite.Else, subst);
-                    var s5 = Unify(tt, te);
-                    subst.Compose(s5);
-                    return subst.Apply(tt);
-                case AttoML.Core.Parsing.Tuple tup:
-                    var items = tup.Items.Select(x => InferExpr(env, x, subst)).ToList();
-                    return new TTuple(items);
-                case ListLit ll:
-                    if (ll.Items.Count == 0)
-                    {
-                        var tvl = FreshVar();
-                        return new TList(tvl);
-                    }
-                    var firstT = InferExpr(env, ll.Items[0], subst);
-                    for (int i = 1; i < ll.Items.Count; i++)
-                    {
-                        var ti2 = InferExpr(env, ll.Items[i], subst);
-                        var si = Unify(firstT, ti2);
-                        subst.Compose(si);
-                        firstT = subst.Apply(firstT);
-                    }
-                    return new TList(subst.Apply(firstT));
-                case RecordLit rl:
-                    var fields = new Dictionary<string, Type>();
-                    foreach (var (name, e) in rl.Fields)
-                    {
-                        var ft = InferExpr(env, e, subst);
-                        fields[name] = ft;
-                    }
-                    return new TRecord(fields);
-                case RecordAccess ra:
-                    var recT = InferExpr(env, ra.Record, subst);
-                    if (recT is not TRecord trec)
-                        throw new Exception($"Cannot access field '{ra.Field}' of non-record type {recT}");
-                    if (!trec.Fields.TryGetValue(ra.Field, out var fieldType))
-                        throw new Exception($"Record does not have field '{ra.Field}'");
-                    return fieldType;
-                case Qualify q:
-                    // Check if this is actually record field access
-                    // If q.Module is a variable with record type, treat as record access
-                    if (env.TryGet(q.Module, out var varSch))
-                    {
-                        var varType = Instantiate(varSch);
-                        if (varType is TRecord trecQual)
-                        {
-                            // This is record access, not module qualification
-                            if (!trecQual.Fields.TryGetValue(q.Name, out var fieldTypeQual))
-                                throw new Exception($"Record does not have field '{q.Name}'");
-                            return fieldTypeQual;
-                        }
-                    }
-                    // Otherwise treat as qualified module name
-                    var qn = $"{q.Module}.{q.Name}";
-                    if (!env.TryGet(qn, out var sch2))
-                        throw new Exception($"Unbound qualified name '{qn}'");
-                    return Instantiate(sch2);
-                case Match m:
-                    var tScrutinee = InferExpr(env, m.Scrutinee, subst);
-                    // string scrutExpr = m.Scrutinee is Var vv ? vv.Name : m.Scrutinee.GetType().Name;
-                    // Console.WriteLine($"[MATCH DEBUG] Match on '{scrutExpr}' ({m.Cases.Count} cases): Initial scrutinee type: {tScrutinee}");
-                    Type? tResult = null;
-                    int caseNum = 0;
-                    foreach (var (pat, branch) in m.Cases)
-                    {
-                        var envCase = env.Clone();
-                        // CRITICAL FIX: Apply current substitution to scrutinee type before pattern matching
-                        // As we process cases, subst gets updated, so we need the current view of the scrutinee type
-                        var currentScrutineeType = subst.Apply(tScrutinee);
-                        // Console.WriteLine($"[MATCH DEBUG] Case #{caseNum}: scrutinee type after subst.Apply = {currentScrutineeType}");
-                        // if (tScrutinee.ToString() != currentScrutineeType.ToString())
-                        // {
-                        //     Console.WriteLine($"[MATCH DEBUG]   Scrutinee type CHANGED from {tScrutinee} to {currentScrutineeType}");
-                        // }
-                        try
-                        {
-                            InferPattern(envCase, subst, currentScrutineeType, pat);
-                        }
-                        catch (Exception ex)
-                        {
-                            // Console.WriteLine($"[TYPE DEBUG] Error in InferPattern for case #{caseNum}:");
-                            // Console.WriteLine($"  Scrutinee type: {currentScrutineeType}");
-                            // Console.WriteLine($"  Pattern: {pat}");
-                            throw;
-                        }
-                        var bt = InferExpr(envCase, branch, subst);
-                        if (tResult == null)
-                        {
-                            tResult = bt;
-                        }
-                        else
-                        {
-                            var sm = Unify(tResult, bt);
-                            subst.Compose(sm);
-                            tResult = subst.Apply(tResult);
-                        }
-                        caseNum++;
-                    }
-                    if (tResult == null) throw new Exception("match must have at least one case");
-                    return subst.Apply(tResult);
-                case Raise r:
-                    var tEx = InferExpr(env, r.Expr, subst);
-                    var srx = Unify(tEx, TConst.Exn);
-                    subst.Compose(srx);
-                    // 'raise e' can have any type; return a fresh var so it unifies with context
-                    return FreshVar();
-                case Handle h:
-                    var tBody = InferExpr(env, h.Expr, subst);
-                    foreach (var (pat, branch) in h.Cases)
-                    {
-                        var envCase = env.Clone();
-                        // Patterns in handle match exceptions
-                        InferPattern(envCase, subst, TConst.Exn, pat);
-                        var bt = InferExpr(envCase, branch, subst);
-                        var su = Unify(tBody, bt);
-                        subst.Compose(su);
-                        tBody = subst.Apply(tBody);
-                    }
-                    return subst.Apply(tBody);
-                default:
-                    throw new NotSupportedException($"Cannot infer type for {expr.GetType().Name}");
+                IntLit => TConst.Int,
+                FloatLit => TConst.Float,
+                StringLit => TConst.String,
+                BoolLit => TConst.Bool,
+                UnitLit => TConst.Unit,
+                Var v => InferVar(env, v),
+                Fun f => InferFun(env, f, subst),
+                App a => InferApp(env, a, subst),
+                Let l => InferLet(env, l, subst),
+                LetRec lr => InferLetRec(env, lr, subst),
+                IfThenElse ite => InferIfThenElse(env, ite, subst),
+                AttoML.Core.Parsing.Tuple tup => InferTuple(env, tup, subst),
+                ListLit ll => InferList(env, ll, subst),
+                RecordLit rl => InferRecord(env, rl, subst),
+                RecordAccess ra => InferRecordAccess(env, ra, subst),
+                Qualify q => InferQualify(env, q),
+                Match m => InferMatch(env, m, subst),
+                Raise r => InferRaise(env, r, subst),
+                Handle h => InferHandle(env, h, subst),
+                _ => throw new NotSupportedException($"Cannot infer type for {expr.GetType().Name}")
+            };
+        }
+
+        private Type InferVar(TypeEnv env, Var v)
+        {
+            if (!env.TryGet(v.Name, out var sch))
+                throw new Exception($"Unbound variable '{v.Name}'");
+            return Instantiate(sch);
+        }
+
+        private Type InferFun(TypeEnv env, Fun f, Subst subst)
+        {
+            var tv = FreshVar();
+            var env2 = env.Clone();
+            env2.Add(f.Param, new Scheme(Array.Empty<TVar>(), tv));
+            var bodyT = InferExpr(env2, f.Body, subst);
+            return new TFun(subst.Apply(tv), bodyT);
+        }
+
+        private Type InferApp(TypeEnv env, App a, Subst subst)
+        {
+            var tFun = InferExpr(env, a.Func, subst);
+            var tArg = InferExpr(env, a.Arg, subst);
+            var tRes = FreshVar();
+            try
+            {
+                var s2 = Unify(tFun, new TFun(tArg, tRes));
+                subst.Compose(s2);
+                return subst.Apply(tRes);
             }
+            catch (Exception ex)
+            {
+                throw new Exception($"Application type mismatch: func {tFun} applied to arg {tArg}. {ex.Message}");
+            }
+        }
+
+        private Type InferLet(TypeEnv env, Let l, Subst subst)
+        {
+            var t1 = InferExpr(env, l.Expr, subst);
+            if (l.TypeAnn != null)
+            {
+                var annTy = Modules.ModuleSystem.TypeFromTypeExpr(l.TypeAnn);
+                var sAnn = Unify(t1, annTy);
+                subst.Compose(sAnn);
+                t1 = subst.Apply(annTy);
+            }
+            var gen = Generalize(env, t1);
+            var env3 = env.Clone();
+            env3.Add(l.Name, gen);
+            return InferExpr(env3, l.Body, subst);
+        }
+
+        private Type InferLetRec(TypeEnv env, LetRec lr, Subst subst)
+        {
+            var tvf = FreshVar();
+            var env4 = env.Clone();
+            env4.Add(lr.Name, new Scheme(Array.Empty<TVar>(), tvf));
+            var tparam = FreshVar();
+            env4.Add(lr.Param, new Scheme(Array.Empty<TVar>(), tparam));
+            var tbody = InferExpr(env4, lr.FuncBody, subst);
+            var s3 = Unify(tvf, new TFun(tparam, tbody));
+            subst.Compose(s3);
+            if (lr.TypeAnn != null)
+            {
+                var annTy = Modules.ModuleSystem.TypeFromTypeExpr(lr.TypeAnn);
+                var sAnn = Unify(subst.Apply(tvf), annTy);
+                subst.Compose(sAnn);
+                tvf = subst.Apply(annTy) as TVar ?? tvf;
+            }
+            var env5 = env.Clone();
+            env5.Add(lr.Name, Generalize(env, subst.Apply(tvf)));
+            return InferExpr(env5, lr.InBody, subst);
+        }
+
+        private Type InferIfThenElse(TypeEnv env, IfThenElse ite, Subst subst)
+        {
+            var tc = InferExpr(env, ite.Cond, subst);
+            var s4 = Unify(tc, TConst.Bool);
+            subst.Compose(s4);
+            var tt = InferExpr(env, ite.Then, subst);
+            var te = InferExpr(env, ite.Else, subst);
+            var s5 = Unify(tt, te);
+            subst.Compose(s5);
+            return subst.Apply(tt);
+        }
+
+        private Type InferTuple(TypeEnv env, AttoML.Core.Parsing.Tuple tup, Subst subst)
+        {
+            var items = tup.Items.Select(x => InferExpr(env, x, subst)).ToList();
+            return new TTuple(items);
+        }
+
+        private Type InferList(TypeEnv env, ListLit ll, Subst subst)
+        {
+            if (ll.Items.Count == 0)
+            {
+                var tvl = FreshVar();
+                return new TList(tvl);
+            }
+            var firstT = InferExpr(env, ll.Items[0], subst);
+            for (int i = 1; i < ll.Items.Count; i++)
+            {
+                var ti2 = InferExpr(env, ll.Items[i], subst);
+                var si = Unify(firstT, ti2);
+                subst.Compose(si);
+                firstT = subst.Apply(firstT);
+            }
+            return new TList(subst.Apply(firstT));
+        }
+
+        private Type InferRecord(TypeEnv env, RecordLit rl, Subst subst)
+        {
+            var fields = new Dictionary<string, Type>();
+            foreach (var (name, e) in rl.Fields)
+            {
+                var ft = InferExpr(env, e, subst);
+                fields[name] = ft;
+            }
+            return new TRecord(fields);
+        }
+
+        private Type InferRecordAccess(TypeEnv env, RecordAccess ra, Subst subst)
+        {
+            var recT = InferExpr(env, ra.Record, subst);
+            if (recT is not TRecord trec)
+                throw new Exception($"Cannot access field '{ra.Field}' of non-record type {recT}");
+            if (!trec.Fields.TryGetValue(ra.Field, out var fieldType))
+                throw new Exception($"Record does not have field '{ra.Field}'");
+            return fieldType;
+        }
+
+        private Type InferQualify(TypeEnv env, Qualify q)
+        {
+            // Check if this is actually record field access
+            if (env.TryGet(q.Module, out var varSch))
+            {
+                var varType = Instantiate(varSch);
+                if (varType is TRecord trecQual)
+                {
+                    if (!trecQual.Fields.TryGetValue(q.Name, out var fieldTypeQual))
+                        throw new Exception($"Record does not have field '{q.Name}'");
+                    return fieldTypeQual;
+                }
+            }
+            // Otherwise treat as qualified module name
+            var qn = $"{q.Module}.{q.Name}";
+            if (!env.TryGet(qn, out var sch2))
+                throw new Exception($"Unbound qualified name '{qn}'");
+            return Instantiate(sch2);
+        }
+
+        private Type InferMatch(TypeEnv env, Match m, Subst subst)
+        {
+            var tScrutinee = InferExpr(env, m.Scrutinee, subst);
+            Type? tResult = null;
+            int caseNum = 0;
+            foreach (var (pat, branch) in m.Cases)
+            {
+                var envCase = env.Clone();
+                var currentScrutineeType = subst.Apply(tScrutinee);
+                try
+                {
+                    InferPattern(envCase, subst, currentScrutineeType, pat);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+                var bt = InferExpr(envCase, branch, subst);
+                if (tResult == null)
+                {
+                    tResult = bt;
+                }
+                else
+                {
+                    var sm = Unify(tResult, bt);
+                    subst.Compose(sm);
+                    tResult = subst.Apply(tResult);
+                }
+                caseNum++;
+            }
+            if (tResult == null) throw new Exception("match must have at least one case");
+            return subst.Apply(tResult);
+        }
+
+        private Type InferRaise(TypeEnv env, Raise r, Subst subst)
+        {
+            var tEx = InferExpr(env, r.Expr, subst);
+            var srx = Unify(tEx, TConst.Exn);
+            subst.Compose(srx);
+            return FreshVar();
+        }
+
+        private Type InferHandle(TypeEnv env, Handle h, Subst subst)
+        {
+            var tBody = InferExpr(env, h.Expr, subst);
+            foreach (var (pat, branch) in h.Cases)
+            {
+                var envCase = env.Clone();
+                InferPattern(envCase, subst, TConst.Exn, pat);
+                var bt = InferExpr(envCase, branch, subst);
+                var su = Unify(tBody, bt);
+                subst.Compose(su);
+                tBody = subst.Apply(tBody);
+            }
+            return subst.Apply(tBody);
         }
 
         // Exposed unify helper for annotation checks
