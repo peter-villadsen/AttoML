@@ -1,3 +1,4 @@
+using AttoML.Core;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -213,7 +214,7 @@ namespace AttoML.Core.Lexer
                     return new Token(TokenKind.Minus, "-", start);
             }
 
-            throw new Exception($"Unexpected character '{c}' at position {start}");
+            throw new LexerException($"Unexpected character '{c}' at position {start}", start);
         }
 
         private void SkipWhitespaceAndComments()
@@ -248,7 +249,7 @@ namespace AttoML.Core.Lexer
             // Assume current position is at '(' and next is '*'
             // Consume the initial '(*'
             Advance(); // '('
-            if (IsEOF) throw new Exception("Unterminated comment");
+            if (IsEOF) throw new LexerException("Unterminated comment");
             Advance(); // '*'
             int depth = 1;
             while (!IsEOF && depth > 0)
@@ -257,7 +258,7 @@ namespace AttoML.Core.Lexer
                 if (Peek() == '(' && Peek2() == '*')
                 {
                     Advance(); // '('
-                    if (IsEOF) throw new Exception("Unterminated comment");
+                    if (IsEOF) throw new LexerException("Unterminated comment");
                     Advance(); // '*'
                     depth++;
                     continue;
@@ -266,7 +267,7 @@ namespace AttoML.Core.Lexer
                 if (Peek() == '*' && Peek2() == ')')
                 {
                     Advance(); // '*'
-                    if (IsEOF) throw new Exception("Unterminated comment");
+                    if (IsEOF) throw new LexerException("Unterminated comment");
                     Advance(); // ')'
                     depth--;
                     continue;
@@ -276,7 +277,7 @@ namespace AttoML.Core.Lexer
             }
             if (depth > 0)
             {
-                throw new Exception("Unterminated comment");
+                throw new LexerException("Unterminated comment");
             }
         }
 

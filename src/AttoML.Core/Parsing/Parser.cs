@@ -1,3 +1,4 @@
+using AttoML.Core;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,7 +21,7 @@ namespace AttoML.Core.Parsing
         private TokenKind Kind => Peek().Kind;
         private Token Next() => _tokens[_pos++];
         private bool Match(TokenKind kind) { if (Kind == kind) { _pos++; return true; } return false; }
-        private Token Expect(TokenKind kind) { var t = Next(); if (t.Kind != kind) throw new Exception($"Expected {kind} but got {t.Kind}"); return t; }
+        private Token Expect(TokenKind kind) { var t = Next(); if (t.Kind != kind) throw new ParseException(kind.ToString(), t.Kind.ToString()); return t; }
 
         // Helper to accept either -> or => for backward compatibility
         private void ExpectArrow()
@@ -31,7 +32,7 @@ namespace AttoML.Core.Parsing
             }
             else
             {
-                throw new Exception($"Expected '->' or '=>' but got {Kind}");
+                throw new ParseException($"Expected '->' or '=>' but got {Kind}");
             }
         }
 
@@ -64,7 +65,7 @@ namespace AttoML.Core.Parsing
                 return text;
             }
             var contextMsg = string.IsNullOrEmpty(context) ? "" : $" in {context}";
-            throw new Exception($"Expected identifier{contextMsg}, got {Kind}");
+            throw new ParseException($"Expected identifier{contextMsg}, got {Kind}");
         }
 
         public (List<ModuleDecl> modules, Expr? expr) ParseCompilationUnit()
@@ -154,7 +155,7 @@ namespace AttoML.Core.Parsing
             }
             if (!sawAnyParam)
             {
-                throw new Exception("Expected at least one parameter after function name");
+                throw new ParseException("Expected at least one parameter after function name");
             }
             Expect(TokenKind.Equals);
             var body = ParseExpr();
@@ -295,7 +296,7 @@ namespace AttoML.Core.Parsing
             }
             else
             {
-                throw new Exception("Expected parameter after 'fun'");
+                throw new ParseException("Expected parameter after 'fun'");
             }
         }
 
@@ -321,7 +322,7 @@ namespace AttoML.Core.Parsing
             }
             else
             {
-                throw new Exception("Expected parameter after 'fn'");
+                throw new ParseException("Expected parameter after 'fn'");
             }
         }
 
@@ -426,7 +427,7 @@ namespace AttoML.Core.Parsing
                         {
                             "div" => "idiv",
                             "mod" => "mod",
-                            _ => throw new Exception("unknown op")
+                            _ => throw new ParseException("unknown op")
                         }
                     };
                     var q = new Qualify("Base", name);
@@ -613,7 +614,7 @@ namespace AttoML.Core.Parsing
                             {
                                 "div" => "idiv",
                                 "mod" => "mod",
-                                _ => throw new Exception("unknown op")
+                                _ => throw new ParseException("unknown op")
                             }
                         };
                         var q = new Qualify("Base", name);
@@ -669,7 +670,7 @@ namespace AttoML.Core.Parsing
                         }
                         return new Var(keywordText);
                     }
-                    throw new Exception($"Unexpected token {Kind}");
+                    throw new ParseException($"Unexpected token {Kind}");
             }
         }
 
@@ -700,7 +701,7 @@ namespace AttoML.Core.Parsing
                 // Must be followed by 'end'
                 if (Kind != TokenKind.End)
                 {
-                    throw new Exception($"Expected 'end' or '|' after match case, got {Kind}");
+                    throw new ParseException($"Expected 'end' or '|' after match case, got {Kind}");
                 }
             }
             Expect(TokenKind.End);
@@ -810,7 +811,7 @@ namespace AttoML.Core.Parsing
                         // Keywords are always lowercase, so they're pattern variables, not constructors
                         return new PVar(keywordText);
                     }
-                    throw new Exception($"Unexpected token {Kind} in pattern");
+                    throw new ParseException($"Unexpected token {Kind} in pattern");
             }
         }
 
@@ -947,7 +948,7 @@ namespace AttoML.Core.Parsing
 
                     if (!sawAnyParam)
                     {
-                        throw new Exception($"Expected at least one parameter after function name '{bn}' in structure. Next token: {Kind}");
+                        throw new ParseException($"Expected at least one parameter after function name '{bn}' in structure. Next token: {Kind}");
                     }
 
                     // Parse optional type annotation for function
@@ -995,7 +996,7 @@ namespace AttoML.Core.Parsing
                 }
                 else
                 {
-                    throw new Exception($"Expected val, fun, or let in structure body, but got {Kind}");
+                    throw new ParseException($"Expected val, fun, or let in structure body, but got {Kind}");
                 }
                 
                 if (Kind == TokenKind.Comma) Next();

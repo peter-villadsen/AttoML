@@ -23,7 +23,7 @@ namespace AttoML.Tests.Modules
         {
             var src = "structure M = { let x : int = true }";
             var fe = new Frontend();
-            Assert.Throws<System.Exception>(() => fe.Compile(src));
+            Assert.Throws<AttoML.Core.TypeException>(() => fe.Compile(src));
         }
     }
 }

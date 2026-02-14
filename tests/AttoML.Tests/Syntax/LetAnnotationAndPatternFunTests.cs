@@ -20,7 +20,7 @@ namespace AttoML.Tests.Syntax
         public void LetAnnotation_Mismatch_Fails()
         {
             var fe = new Frontend();
-            Assert.Throws<System.Exception>(() => fe.Compile("let x : int = true in x"));
+            Assert.Throws<AttoML.Core.TypeException>(() => fe.Compile("let x : int = true in x"));
         }
 
         [Fact]

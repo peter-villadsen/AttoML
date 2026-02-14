@@ -46,7 +46,7 @@ namespace AttoML.Tests.Runtime
         public void RaiseRequiresExnType()
         {
             var fe = new Frontend();
-            Assert.Throws<Exception>(() => fe.Compile("raise 1"));
+            Assert.Throws<AttoML.Core.TypeException>(() => fe.Compile("raise 1"));
         }
     }
 }

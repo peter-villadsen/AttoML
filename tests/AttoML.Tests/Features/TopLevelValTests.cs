@@ -62,7 +62,7 @@ namespace AttoML.Tests.Features
         {
             var fe = new Frontend();
             var (decls, mods, expr, type) = fe.Compile("val z : int = true");
-            Assert.Throws<System.Exception>(() => fe.InferTopVals(mods, decls));
+            Assert.Throws<AttoML.Core.TypeException>(() => fe.InferTopVals(mods, decls));
         }
     }
 }

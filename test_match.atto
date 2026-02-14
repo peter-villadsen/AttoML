@@ -1,0 +1,3 @@
+fun test x = match x with 1 -> "one" | 2 -> "two" end
+
+val result = test 1

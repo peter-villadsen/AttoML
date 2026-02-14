@@ -1,3 +1,4 @@
+using AttoML.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,7 +48,7 @@ namespace AttoML.Core.Types
         private Type InferVar(TypeEnv env, Var v)
         {
             if (!env.TryGet(v.Name, out var sch))
-                throw new Exception($"Unbound variable '{v.Name}'");
+                throw new TypeException($"Unbound variable '{v.Name}'");
             return Instantiate(sch);
         }
 
@@ -73,7 +74,7 @@ namespace AttoML.Core.Types
             }
             catch (Exception ex)
             {
-                throw new Exception($"Application type mismatch: func {tFun} applied to arg {tArg}. {ex.Message}");
+                throw new TypeException($"Application type mismatch: func {tFun} applied to arg {tArg}. {ex.Message}");
             }
         }
 
@@ -166,9 +167,9 @@ namespace AttoML.Core.Types
         {
             var recT = InferExpr(env, ra.Record, subst);
             if (recT is not TRecord trec)
-                throw new Exception($"Cannot access field '{ra.Field}' of non-record type {recT}");
+                throw new TypeException($"Cannot access field '{ra.Field}' of non-record type {recT}");
             if (!trec.Fields.TryGetValue(ra.Field, out var fieldType))
-                throw new Exception($"Record does not have field '{ra.Field}'");
+                throw new TypeException($"Record does not have field '{ra.Field}'");
             return fieldType;
         }
 
@@ -181,14 +182,14 @@ namespace AttoML.Core.Types
                 if (varType is TRecord trecQual)
                 {
                     if (!trecQual.Fields.TryGetValue(q.Name, out var fieldTypeQual))
-                        throw new Exception($"Record does not have field '{q.Name}'");
+                        throw new TypeException($"Record does not have field '{q.Name}'");
                     return fieldTypeQual;
                 }
             }
             // Otherwise treat as qualified module name
             var qn = $"{q.Module}.{q.Name}";
             if (!env.TryGet(qn, out var sch2))
-                throw new Exception($"Unbound qualified name '{qn}'");
+                throw new TypeException($"Unbound qualified name '{qn}'");
             return Instantiate(sch2);
         }
 
@@ -222,7 +223,7 @@ namespace AttoML.Core.Types
                 }
                 caseNum++;
             }
-            if (tResult == null) throw new Exception("match must have at least one case");
+            if (tResult == null) throw new TypeException("match must have at least one case");
             return subst.Apply(tResult);
         }
 
@@ -312,19 +313,19 @@ namespace AttoML.Core.Types
                     var cname = pc.Module != null ? $"{pc.Module}.{pc.Name}" : pc.Name;
                     if (!env.TryGet(cname, out var sch))
                     {
-                        throw new Exception($"Unknown constructor '{cname}' in pattern");
+                        throw new TypeException($"Unknown constructor '{cname}' in pattern");
                     }
                     var ctorT = Instantiate(sch);
                     if (ctorT is TAdt at)
                     {
-                        if (pc.Payload != null) throw new Exception($"Constructor '{cname}' does not take a payload");
+                        if (pc.Payload != null) throw new TypeException($"Constructor '{cname}' does not take a payload");
                         subst.Compose(Unify(scrutineeType, at));
                         return;
                     }
                     // Exception constructors return TConst.Exn (with or without payload)
                     if (ctorT is TConst cex && cex.Name == TConst.Exn.Name)
                     {
-                        if (pc.Payload != null) throw new Exception($"Constructor '{cname}' does not take a payload");
+                        if (pc.Payload != null) throw new TypeException($"Constructor '{cname}' does not take a payload");
                         subst.Compose(Unify(scrutineeType, TConst.Exn));
                         return;
                     }
@@ -345,7 +346,7 @@ namespace AttoML.Core.Types
                         }
                         return;
                     }
-                    throw new Exception($"Invalid constructor type for '{cname}'");
+                    throw new TypeException($"Invalid constructor type for '{cname}'");
                 case PList pl:
                     var elemType = FreshVar();
                     var listType = new TList(elemType);
@@ -389,7 +390,7 @@ namespace AttoML.Core.Types
             if (b is TVar vb) return Bind(vb, a);
             if (a is TConst ca && b is TConst cb)
             {
-                if (ca.Name != cb.Name) throw new Exception($"Type mismatch: {ca} vs {cb}");
+                if (ca.Name != cb.Name) throw new TypeException($"Type mismatch: {ca} vs {cb}");
                 return new Subst();
             }
             if (a is TFun fa && b is TFun fb)
@@ -401,7 +402,7 @@ namespace AttoML.Core.Types
             }
             if (a is TTuple ta && b is TTuple tb)
             {
-                if (ta.Items.Count != tb.Items.Count) throw new Exception("Tuple lengths differ");
+                if (ta.Items.Count != tb.Items.Count) throw new TypeException("Tuple lengths differ");
                 var s = new Subst();
                 for (int i=0;i<ta.Items.Count;i++)
                 {
@@ -427,11 +428,11 @@ namespace AttoML.Core.Types
             }
             if (a is TRecord ra && b is TRecord rb)
             {
-                if (ra.Fields.Count != rb.Fields.Count) throw new Exception("Record field counts differ");
+                if (ra.Fields.Count != rb.Fields.Count) throw new TypeException("Record field counts differ");
                 var s = new Subst();
                 foreach (var kv in ra.Fields)
                 {
-                    if (!rb.Fields.TryGetValue(kv.Key, out var bt)) throw new Exception($"Record missing field {kv.Key}");
+                    if (!rb.Fields.TryGetValue(kv.Key, out var bt)) throw new TypeException($"Record missing field {kv.Key}");
                     var si = Unify(s.Apply(kv.Value), s.Apply(bt));
                     s.Compose(si);
                 }
@@ -439,7 +440,7 @@ namespace AttoML.Core.Types
             }
             if (a is TAdt aa && b is TAdt bb)
             {
-                if (aa.Name != bb.Name || aa.TypeArgs.Count != bb.TypeArgs.Count) throw new Exception("ADT mismatch");
+                if (aa.Name != bb.Name || aa.TypeArgs.Count != bb.TypeArgs.Count) throw new TypeException("ADT mismatch");
                 var s = new Subst();
                 for (int i = 0; i < aa.TypeArgs.Count; i++)
                 {
@@ -448,13 +449,13 @@ namespace AttoML.Core.Types
                 }
                 return s;
             }
-            throw new Exception($"Cannot unify types: {a} and {b}");
+            throw new TypeException($"Cannot unify types: {a} and {b}");
         }
 
         private Subst Bind(TVar v, Type t)
         {
             if (t is TVar tv && tv.Id == v.Id) return new Subst();
-            if (Occurs(v, t)) throw new Exception("Occurs check failed");
+            if (Occurs(v, t)) throw new TypeException("Occurs check failed");
             var s = new Subst();
             s.Add(v.Id, t);
             return s;

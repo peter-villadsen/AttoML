@@ -1,3 +1,4 @@
+using AttoML.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -138,7 +139,7 @@ namespace AttoML.Core.Modules
                     foreach (var kv in sig.Members)
                     {
                         if (!s.BindingsByName.ContainsKey(kv.Key))
-                            throw new Exception($"Structure {s.Name} missing member {kv.Key} required by signature {sig.Name}");
+                            throw new ModuleException($"Structure {s.Name} missing member {kv.Key} required by signature {sig.Name}");
                     }
                 }
                 // Intra-structure environment allowing previously bound names to be referenced unqualified
@@ -207,7 +208,7 @@ namespace AttoML.Core.Modules
                             }
                             catch (Exception ex)
                             {
-                                throw new Exception($"Error inferring binding {s.Name}.{bn}: {ex.Message}");
+                                throw new ModuleException($"Error inferring binding {s.Name}.{bn}: {ex.Message}");
                             }
 
                             // Verify body type matches annotation's return type
@@ -217,7 +218,7 @@ namespace AttoML.Core.Modules
                             }
                             catch (Exception ex)
                             {
-                                throw new Exception($"Function body type {substFun.Apply(bodyTy)} doesn't match annotated return type {tf.To}: {ex.Message}");
+                                throw new ModuleException($"Function body type {substFun.Apply(bodyTy)} doesn't match annotated return type {tf.To}: {ex.Message}");
                             }
 
                             // Use the annotation as the final type
@@ -242,7 +243,7 @@ namespace AttoML.Core.Modules
                     }
                     catch (Exception ex)
                     {
-                        throw new Exception($"Error inferring binding {s.Name}.{bn}: {ex.Message}");
+                        throw new ModuleException($"Error inferring binding {s.Name}.{bn}: {ex.Message}");
                     }
                     var ty = subst.Apply(t);
                     if (bann != null)
@@ -312,7 +313,7 @@ namespace AttoML.Core.Modules
                 },
                 TypeVar tv => typeParamMap != null && typeParamMap.TryGetValue(tv.Name, out var tvar)
                     ? tvar
-                    : throw new Exception($"Unbound type variable '{tv.Name}"),
+                    : throw new ModuleException($"Unbound type variable '{tv.Name}"),
                 TypeArrow ta => new TFun(TypeFromTypeExpr(ta.From, typeParamMap), TypeFromTypeExpr(ta.To, typeParamMap)),
                 TypeTuple tt => new TTuple(tt.Items.Select(t => TypeFromTypeExpr(t, typeParamMap)).ToList()),
                 TypeApp tapp => tapp.Constructor switch
@@ -323,7 +324,7 @@ namespace AttoML.Core.Modules
                     // This includes: option, result, map, set, and user-defined types
                     _ => new TAdt(tapp.Constructor, new[] { TypeFromTypeExpr(tapp.Base, typeParamMap) })
                 },
-                _ => throw new Exception("Unknown type expr")
+                _ => throw new ModuleException("Unknown type expr")
             };
         }
 
