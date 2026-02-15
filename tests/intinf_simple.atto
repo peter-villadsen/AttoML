@@ -1,0 +1,18 @@
+(* Simple IntInf test *)
+
+(* Test basic literal *)
+let x = 42I in
+
+(* Test arithmetic *)
+let sum = 10I + 20I in
+let prod = 5I * 6I in
+
+(* Test very large number *)
+let huge = 999999999999999999999999I in
+
+(* Test IntInf module *)
+let converted = IntInf.fromInt 100 in
+let str = IntInf.toString 12345I in
+
+(* Return result *)
+(x, sum, prod, IntInf.toString huge, converted, str)

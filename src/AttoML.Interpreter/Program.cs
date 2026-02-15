@@ -313,6 +313,12 @@ namespace AttoML.Interpreter
 			{
 				evaluator.GlobalEnv.Set($"String.{kv.Key}", kv.Value);
 			}
+			var intInfMod = IntInfModule.Build();
+			evaluator.Modules["IntInf"] = intInfMod;
+			foreach (var kv in intInfMod.Members)
+			{
+				evaluator.GlobalEnv.Set($"IntInf.{kv.Key}", kv.Value);
+			}
 			var tupleMod = TupleModule.Build();
 			evaluator.Modules["Tuple"] = tupleMod;
 			foreach (var kv in tupleMod.Members)

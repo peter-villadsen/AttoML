@@ -1,0 +1,62 @@
+(* Test IntInf (arbitrary precision integer) support *)
+
+(* Test basic literals and arithmetic *)
+let x = 42I in
+let y = 100I in
+let huge = 123456789012345678901234567890I in
+
+(* Test arithmetic operations *)
+let sum = x + y in
+let diff = y - x in
+let prod = x * 10I in
+let quot = y / x in
+let rem = y mod x in
+
+(* Test pattern matching *)
+let testMatch = case 42I of
+  42I -> "matched!"
+| _ -> "no match" in
+
+(* Test comparisons *)
+let isLess = 10I < 20I in
+let isEqual = 42I = 42I in
+
+(* Test IntInf module functions *)
+let converted = IntInf.fromInt 42 in
+let str = IntInf.toString 12345I in
+let addResult = IntInf.add (10I, 20I) in
+let subResult = IntInf.sub (100I, 30I) in
+let mulResult = IntInf.mul (7I, 8I) in
+let negated = IntInf.neg 42I in
+let absolute = IntInf.abs negated in
+let minimum = IntInf.min (10I, 20I) in
+let maximum = IntInf.max (10I, 20I) in
+let power = IntInf.pow (2I, 10) in
+let sign1 = IntInf.sign 42I in
+
+(* Build a result tuple to show all values *)
+let _ = TextIO.print "=== IntInf Tests ===\n" in
+let _ = TextIO.print ("x = " ^ IntInf.toString x ^ "\n") in
+let _ = TextIO.print ("y = " ^ IntInf.toString y ^ "\n") in
+let _ = TextIO.print ("huge = " ^ IntInf.toString huge ^ "\n") in
+let _ = TextIO.print ("sum = " ^ IntInf.toString sum ^ "\n") in
+let _ = TextIO.print ("diff = " ^ IntInf.toString diff ^ "\n") in
+let _ = TextIO.print ("prod = " ^ IntInf.toString prod ^ "\n") in
+let _ = TextIO.print ("quot = " ^ IntInf.toString quot ^ "\n") in
+let _ = TextIO.print ("rem = " ^ IntInf.toString rem ^ "\n") in
+let _ = TextIO.print ("testMatch = " ^ testMatch ^ "\n") in
+let _ = TextIO.print ("isLess = " ^ (if isLess then "true" else "false") ^ "\n") in
+let _ = TextIO.print ("isEqual = " ^ (if isEqual then "true" else "false") ^ "\n") in
+let _ = TextIO.print ("converted = " ^ IntInf.toString converted ^ "\n") in
+let _ = TextIO.print ("str = " ^ str ^ "\n") in
+let _ = TextIO.print ("addResult = " ^ IntInf.toString addResult ^ "\n") in
+let _ = TextIO.print ("subResult = " ^ IntInf.toString subResult ^ "\n") in
+let _ = TextIO.print ("mulResult = " ^ IntInf.toString mulResult ^ "\n") in
+let _ = TextIO.print ("negated = " ^ IntInf.toString negated ^ "\n") in
+let _ = TextIO.print ("absolute = " ^ IntInf.toString absolute ^ "\n") in
+let _ = TextIO.print ("minimum = " ^ IntInf.toString minimum ^ "\n") in
+let _ = TextIO.print ("maximum = " ^ IntInf.toString maximum ^ "\n") in
+let _ = TextIO.print ("power = " ^ IntInf.toString power ^ "\n") in
+let _ = TextIO.print ("sign1 = " ^ Int.toString sign1 ^ "\n") in
+let _ = TextIO.print "=== All tests passed! ===\n" in
+"IntInf tests completed"

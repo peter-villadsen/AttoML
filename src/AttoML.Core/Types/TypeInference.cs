@@ -24,6 +24,7 @@ namespace AttoML.Core.Types
             {
                 IntLit => TConst.Int,
                 FloatLit => TConst.Float,
+                IntInfLit => TConst.IntInf,
                 StringLit => TConst.String,
                 BoolLit => TConst.Bool,
                 UnitLit => TConst.Unit,

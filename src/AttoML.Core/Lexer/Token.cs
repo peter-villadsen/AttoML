@@ -8,6 +8,7 @@ namespace AttoML.Core.Lexer
         Identifier,
         IntLiteral,
         FloatLiteral,
+        IntInfLiteral,
         StringLiteral,
         BoolLiteral,
         Unit,

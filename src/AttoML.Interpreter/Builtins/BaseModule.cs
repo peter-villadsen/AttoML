@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using AttoML.Interpreter.Runtime;
 
 namespace AttoML.Interpreter.Builtins
@@ -27,6 +28,7 @@ namespace AttoML.Interpreter.Builtins
         {
             if (a is IntVal ai && b is IntVal bi) return ai.Value == bi.Value;
             if (a is FloatVal af && b is FloatVal bf) return af.Value == bf.Value;
+            if (a is IntInfVal aii && b is IntInfVal bii) return aii.Value == bii.Value;
             if (a is StringVal asv && b is StringVal bsv) return asv.Value == bsv.Value;
             if (a is BoolVal ab && b is BoolVal bb) return ab.Value == bb.Value;
             if (a is UnitVal && b is UnitVal) return true;
@@ -47,7 +49,18 @@ namespace AttoML.Interpreter.Builtins
             {
                 if (a is IntVal ai && b is IntVal bi) return new IntVal(intOp(ai.Value, bi.Value));
                 if (a is FloatVal af && b is FloatVal bf) return new FloatVal(floatOp(af.Value, bf.Value));
-                throw new Exception("Numeric operation requires both operands to be int or both float");
+                if (a is IntInfVal aii && b is IntInfVal bii)
+                {
+                    // Map int operations to BigInteger
+                    return new IntInfVal(intOp switch
+                    {
+                        _ when intOp(1, 1) == 2 => aii.Value + bii.Value,  // add
+                        _ when intOp(1, 1) == 0 => aii.Value - bii.Value,  // sub
+                        _ when intOp(2, 3) == 6 => aii.Value * bii.Value,  // mul
+                        _ => throw new Exception("Unknown operation")
+                    });
+                }
+                throw new Exception("Numeric operation requires matching types (int, float, or intinf)");
             };
         }
 
@@ -64,7 +77,12 @@ namespace AttoML.Interpreter.Builtins
                 {
                     return new FloatVal(af.Value / bf.Value);
                 }
-                throw new Exception("Numeric division requires both operands to be int or both float");
+                if (a is IntInfVal aii && b is IntInfVal bii)
+                {
+                    if (bii.Value.IsZero) throw new AttoML.Interpreter.Runtime.AttoException(new AdtVal("Div", null));
+                    return new IntInfVal(aii.Value / bii.Value);
+                }
+                throw new Exception("Numeric division requires matching types (int, float, or intinf)");
             };
         }
 
@@ -90,7 +108,12 @@ namespace AttoML.Interpreter.Builtins
                     if (bi.Value == 0) throw new AttoML.Interpreter.Runtime.AttoException(new AdtVal("Div", null));
                     return new IntVal(ai.Value % bi.Value);
                 }
-                throw new Exception("mod operator requires integer operands");
+                if (a is IntInfVal aii && b is IntInfVal bii)
+                {
+                    if (bii.Value.IsZero) throw new AttoML.Interpreter.Runtime.AttoException(new AdtVal("Div", null));
+                    return new IntInfVal(aii.Value % bii.Value);
+                }
+                throw new Exception("mod operator requires integer operands (int or intinf)");
             };
         }
 
@@ -100,7 +123,17 @@ namespace AttoML.Interpreter.Builtins
             {
                 if (a is IntVal ai && b is IntVal bi) return new BoolVal(intPred(ai.Value, bi.Value));
                 if (a is FloatVal af && b is FloatVal bf) return new BoolVal(floatPred(af.Value, bf.Value));
-                throw new Exception("Numeric comparison requires both operands to be int or both float");
+                if (a is IntInfVal aii && b is IntInfVal bii)
+                {
+                    // Map int comparison to BigInteger
+                    int cmp = aii.Value.CompareTo(bii.Value);
+                    return new BoolVal(intPred switch
+                    {
+                        _ when intPred(1, 2) == true => cmp < 0,  // less than
+                        _ => throw new Exception("Unknown comparison")
+                    });
+                }
+                throw new Exception("Numeric comparison requires matching types (int, float, or intinf)");
             };
         }
     }

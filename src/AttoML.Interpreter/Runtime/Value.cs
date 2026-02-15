@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace AttoML.Interpreter.Runtime
 {
@@ -27,6 +28,16 @@ namespace AttoML.Interpreter.Runtime
             Value = v;
         }
         public override string ToString() => Value.ToString();
+    }
+
+    public sealed class IntInfVal : Value
+    {
+        public BigInteger Value;
+        public IntInfVal(BigInteger v)
+        {
+            Value = v;
+        }
+        public override string ToString() => Value.ToString() + "I";
     }
 
     public sealed class StringVal : Value
@@ -100,6 +111,7 @@ namespace AttoML.Interpreter.Runtime
             {
                 (IntVal i1, IntVal i2) => i1.Value == i2.Value,
                 (FloatVal f1, FloatVal f2) => f1.Value == f2.Value,
+                (IntInfVal ii1, IntInfVal ii2) => ii1.Value == ii2.Value,
                 (StringVal s1, StringVal s2) => s1.Value == s2.Value,
                 (BoolVal b1, BoolVal b2) => b1.Value == b2.Value,
                 (UnitVal, UnitVal) => true,
@@ -123,6 +135,7 @@ namespace AttoML.Interpreter.Runtime
             {
                 IntVal i => i.Value.GetHashCode(),
                 FloatVal f => f.Value.GetHashCode(),
+                IntInfVal ii => ii.Value.GetHashCode(),
                 StringVal s => s.Value.GetHashCode(),
                 BoolVal b => b.Value.GetHashCode(),
                 UnitVal => 0,
@@ -206,6 +219,7 @@ namespace AttoML.Interpreter.Runtime
             {
                 (IntVal i1, IntVal i2) => i1.Value == i2.Value,
                 (FloatVal f1, FloatVal f2) => f1.Value == f2.Value,
+                (IntInfVal ii1, IntInfVal ii2) => ii1.Value == ii2.Value,
                 (StringVal s1, StringVal s2) => s1.Value == s2.Value,
                 (BoolVal b1, BoolVal b2) => b1.Value == b2.Value,
                 (UnitVal, UnitVal) => true,
@@ -226,6 +240,7 @@ namespace AttoML.Interpreter.Runtime
             {
                 IntVal i => i.Value.GetHashCode(),
                 FloatVal f => f.Value.GetHashCode(),
+                IntInfVal ii => ii.Value.GetHashCode(),
                 StringVal s => s.Value.GetHashCode(),
                 BoolVal b => b.Value.GetHashCode(),
                 UnitVal => 0,

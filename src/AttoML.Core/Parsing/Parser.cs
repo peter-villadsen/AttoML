@@ -2,6 +2,7 @@ using AttoML.Core;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics;
 using AttoML.Core.Lexer;
 
 namespace AttoML.Core.Parsing
@@ -636,6 +637,8 @@ namespace AttoML.Core.Parsing
                     return new IntLit(int.Parse(Next().Text, CultureInfo.InvariantCulture));
                 case TokenKind.FloatLiteral:
                     return new FloatLit(double.Parse(Next().Text, CultureInfo.InvariantCulture));
+                case TokenKind.IntInfLiteral:
+                    return new IntInfLit(BigInteger.Parse(Next().Text, CultureInfo.InvariantCulture));
                 case TokenKind.StringLiteral:
                     return new StringLit(Next().Text);
                 case TokenKind.BoolLiteral:
@@ -763,6 +766,8 @@ namespace AttoML.Core.Parsing
                     return new PInt(int.Parse(Next().Text, CultureInfo.InvariantCulture));
                 case TokenKind.FloatLiteral:
                     return new PFloat(double.Parse(Next().Text, CultureInfo.InvariantCulture));
+                case TokenKind.IntInfLiteral:
+                    return new PIntInf(BigInteger.Parse(Next().Text, CultureInfo.InvariantCulture));
                 case TokenKind.StringLiteral:
                     return new PString(Next().Text);
                 case TokenKind.BoolLiteral:
@@ -817,7 +822,7 @@ namespace AttoML.Core.Parsing
 
         private bool IsPatternStart(TokenKind k)
         {
-            return k == TokenKind.Identifier || k == TokenKind.IntLiteral || k == TokenKind.FloatLiteral || k == TokenKind.StringLiteral || k == TokenKind.BoolLiteral || k == TokenKind.Unit || k == TokenKind.LParen || k == TokenKind.LBracket || k == TokenKind.LBrace || IsBindableKeyword(k);
+            return k == TokenKind.Identifier || k == TokenKind.IntLiteral || k == TokenKind.FloatLiteral || k == TokenKind.IntInfLiteral || k == TokenKind.StringLiteral || k == TokenKind.BoolLiteral || k == TokenKind.Unit || k == TokenKind.LParen || k == TokenKind.LBracket || k == TokenKind.LBrace || IsBindableKeyword(k);
         }
 
         private Pattern ParseParenOrTuplePattern()

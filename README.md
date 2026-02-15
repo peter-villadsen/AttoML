@@ -4,6 +4,30 @@ AttoML is a small ML-like language implemented in C#. It has a shared frontend (
 
 ## What's New! 🎉
 
+### Arbitrary Precision Integers (IntInf)
+AttoML now supports **arbitrary precision integers** using Standard ML's IntInf interface! Work with numbers of unlimited size:
+
+```ml
+(* Literal syntax with I suffix *)
+42I
+999999999999999999999999999999999999999999I
+
+(* All arithmetic operators work *)
+10I + 20I * 3I
+123456789I * 987654321I
+
+(* Compute huge powers *)
+IntInf.pow (2I, 100)  (* 2^100 = 1267650600228229401496703205376I *)
+
+(* Pattern matching *)
+match x with
+  0I -> "zero"
+| 42I -> "the answer"
+| _ -> "other"
+```
+
+**Benefits**: No integer overflow, perfect for large computations, cryptography, combinatorics.
+
 ### Parametric Polymorphism
 AttoML now supports **parametric types** for algebraic data types! Define generic types that work with any type parameter:
 
@@ -42,7 +66,7 @@ List.foldl (fun a -> fun x -> a + x) 0 (List.filter (fun x -> x > 5) (List.map (
 ## Features
 
 ### Core Language
-- **Literals**: int, float, string, bool, unit
+- **Literals**: int, float, **intinf** (arbitrary precision integers), string, bool, unit
 - **Variables**: identifier lookup with lexical scoping
 - **Functions**:
   - Anonymous: `fun x -> body` or `fn x => body` (SML-style)
@@ -131,7 +155,7 @@ Pattern matching works seamlessly with parametric types:
 ```ml
 datatype 'a option = None | Some of 'a
 
-fun getOr opt default = case opt of
+fun getOr opt default = match opt with
     Some x -> x
   | None -> default
 
@@ -148,10 +172,10 @@ getOr None 3.14             (* float -> float *)
 - **No code duplication**: One implementation for all types
 
 ### Pattern Matching
-Full pattern matching with multiple syntaxes:
-- **OCaml-style**: `match expr with ... end` (explicit end terminator for nested matches)
-- **OCaml-style (short)**: `match expr with ...` (end keyword optional)
-- **SML-style**: `case expr of ...` (original syntax, still supported)
+Full pattern matching with `match...with` syntax:
+- **Primary syntax**: `match expr with pat1 -> e1 | pat2 -> e2`
+- **With explicit end**: `match expr with ... end` (recommended for nested matches)
+- **Backward compatible**: `case expr of ...` (legacy syntax, still supported)
 
 **Pattern types:**
 - **Wildcard**: `_`
@@ -182,7 +206,7 @@ end
 The `end` keyword is optional for simple cases but recommended for clarity in nested matches.
 
 ### Type System
-- **Primitive types**: `int`, `bool`, `float`, `string`, `unit`
+- **Primitive types**: `int`, `bool`, `float`, `intinf`, `string`, `unit`
 - **Compound types**: function types, tuples, lists, records, ADTs
 - **Exception type**: `exn` with pattern matching support
 - **Parametric polymorphism (NEW!)**: Type parameters in ADTs
@@ -221,6 +245,7 @@ The `end` keyword is optional for simple cases but recommended for clarity in ne
 #### Native Modules (C#)
 - **Base**: `add`, `sub`, `mul`, `div`, `eq`, `lt`, `and`, `or`, `not`
 - **Math**: `pi`, `exp`, `log`, `sin`, `cos`, `asin`, `acos`, `atan`, `atan2`, `sinh`, `cosh`, `tanh`, `sqrt` (raises `Domain`)
+- **IntInf** (NEW!): `fromInt`, `toInt`, `toString`, `fromString`, `add`, `sub`, `mul`, `div`, `mod`, `neg`, `abs`, `compare`, `min`, `max`, `pow`, `sign` - Arbitrary precision integers (Standard ML IntInf)
 - **List**: `append`, `map`, `filter`, `foldl`, `foldr`, `head`, `tail`, `length`, `null`
 - **String**: `concat`, `size`, `sub`, `substring`, `explode`, `implode`, `compare`
 - **Tuple**: `fst`, `snd`, `swap`, `curry`, `uncurry`, `fst3`, `snd3`, `thd3`
@@ -247,6 +272,10 @@ fn x => x + 1
 case expr of
     Some x => x
   | None => 0
+
+(* Arbitrary precision integers *)
+42I
+IntInf.pow (2I, 100)
 
 (* Boolean operators *)
 true andalso false
@@ -296,6 +325,33 @@ val it : float = 0
 
 >> 1.5 + 2.25
 val it : float = 3.75
+```
+
+### IntInf (Arbitrary Precision Integers)
+```
+>> 42I
+val it : intinf = 42I
+
+>> 999999999999999999999999999999999999999999I
+val it : intinf = 999999999999999999999999999999999999999999I
+
+>> 10I + 20I
+val it : intinf = 30I
+
+>> 123456789I * 987654321I
+val it : intinf = 121932631112635269I
+
+>> IntInf.pow (2I, 100)
+val it : intinf = 1267650600228229401496703205376I
+
+>> IntInf.fromInt 12345
+val it : intinf = 12345I
+
+>> IntInf.toString 999999999999999999999999I
+val it : string = "999999999999999999999999"
+
+>> match 42I with 0I -> "zero" | 42I -> "the answer" | _ -> "other"
+val it : string = "the answer"
 ```
 
 ### Math Module Examples
@@ -368,7 +424,7 @@ val it : int = 1
 >> match [1, 2, 3] with h::t => t
 val it : [int] = [2, 3]
 
->> case [1, 2, 3, 4] of a::b::rest => a + b
+>> match [1, 2, 3, 4] with a::b::rest -> a + b
 val it : int = 3
 
 >> match [5, 10] with [a, b] => a + b | _ => 0
@@ -396,7 +452,7 @@ val it : float = 13
 >> Red
 val it : Color = <Red>
 
->> case Red of Red => 1 | Green => 2 | Blue => 3
+>> match Red with Red -> 1 | Green -> 2 | Blue -> 3
 val it : int = 1
 ```
 
@@ -409,7 +465,7 @@ val it : option = <Some 42>
 >> Some "hello"
 val it : option = <Some "hello">
 
->> case Some 42 of Some x => x | None => 0
+>> match Some 42 with Some x -> x | None -> 0
 val it : int = 42
 
 >> datatype 'a list = Nil | Cons of 'a * 'a list
@@ -703,7 +759,7 @@ Functions: `empty`, `singleton`, `add`, `remove`, `get`, `contains`, `size`, `is
   - Built-ins: `Base`, `Math`, `List`, `String`
   - `Program` - REPL and file execution
 
-- **Tests**: xUnit test suite (299 tests, 288 passing) covering:
+- **Tests**: xUnit test suite (321 tests, 316 passing) covering:
   - Lexing and parsing
   - Type inference and parametric polymorphism
   - Pattern matching
@@ -801,9 +857,10 @@ AttoML provides a comprehensive set of functional programming libraries:
 #### 🔄 Partial (vs SML Basis Library)
 - **Limited polymorphic collections**: User-defined types support full polymorphism (`'a option`, `'a tree`), but built-in Set and Map modules currently work only with `int` keys/values
 - **No Array module**: Mutable arrays not supported (pure functional focus)
-- **No TextIO/BinIO**: No file I/O operations
+- **TextIO**: Basic file I/O operations available (print, file read/write)
+- **No BinIO**: Binary I/O not supported
 - **No OS/Process**: No operating system interface
-- **No Real/Int modules**: Basic numeric operations only
+- **IntInf module**: Arbitrary precision integers with Standard ML IntInf interface
 - **Limited String**: Core operations present, missing advanced features
 
 ### Design Philosophy

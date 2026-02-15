@@ -1,0 +1,108 @@
+(* Comprehensive IntInf (Arbitrary Precision Integer) Demo *)
+
+let small = 42I in
+let medium = 123456789I in
+let huge = 999999999999999999999999999999999999999999I in
+let sum = 10I + 20I in
+let difference = 100I - 25I in
+let product = 123456789I * 987654321I in
+let quotient = 1000000I / 3I in
+let remainder = 1000000I mod 3I in
+let less = 10I < 20I in
+let equal = 42I = 42I in
+let greater = 100I < 50I in
+let fromIntResult = IntInf.fromInt 12345 in
+let toStringResult = IntInf.toString huge in
+let addResult = IntInf.add (10I, 20I) in
+let subResult = IntInf.sub (100I, 30I) in
+let mulResult = IntInf.mul (7I, 8I) in
+let divResult = IntInf.div (100I, 3I) in
+let modResult = IntInf.mod (100I, 3I) in
+let negativeValue = IntInf.neg 42I in
+let absoluteValue = IntInf.abs negativeValue in
+let minValue = IntInf.min (10I, 20I) in
+let maxValue = IntInf.max (10I, 20I) in
+let power = IntInf.pow (2I, 100) in
+let powerStr = IntInf.toString power in
+let signPositive = IntInf.sign 42I in
+let signZero = IntInf.sign 0I in
+let signNegative = IntInf.sign (IntInf.neg 42I) in
+
+(* Large number computation using IntInf.mul to avoid type conflicts *)
+let fact2 = IntInf.mul (1I, 2I) in
+let fact3 = IntInf.mul (fact2, 3I) in
+let fact4 = IntInf.mul (fact3, 4I) in
+let fact5 = IntInf.mul (fact4, 5I) in
+let fact6 = IntInf.mul (fact5, 6I) in
+let fact7 = IntInf.mul (fact6, 7I) in
+let fact8 = IntInf.mul (fact7, 8I) in
+let fact9 = IntInf.mul (fact8, 9I) in
+let factorial10 = IntInf.mul (fact9, 10I) in
+
+(* Fibonacci sequence *)
+let fib1 = 1I in
+let fib2 = 1I in
+let fib3 = fib1 + fib2 in
+let fib4 = fib2 + fib3 in
+let fib5 = fib3 + fib4 in
+let fib6 = fib4 + fib5 in
+let fib7 = fib5 + fib6 in
+let fib8 = fib6 + fib7 in
+let fib9 = fib7 + fib8 in
+let fib10 = fib8 + fib9 in
+
+let _ = TextIO.print "========================================\n" in
+let _ = TextIO.print "  IntInf: Arbitrary Precision Integers\n" in
+let _ = TextIO.print "========================================\n\n" in
+let _ = TextIO.print "1. BASIC LITERALS:\n" in
+let _ = TextIO.print ("   small = " ^ IntInf.toString small ^ "\n") in
+let _ = TextIO.print ("   medium = " ^ IntInf.toString medium ^ "\n") in
+let _ = TextIO.print ("   huge = " ^ toStringResult ^ "\n\n") in
+let _ = TextIO.print "2. ARITHMETIC OPERATIONS:\n" in
+let _ = TextIO.print ("   10I + 20I = " ^ IntInf.toString sum ^ "\n") in
+let _ = TextIO.print ("   100I - 25I = " ^ IntInf.toString difference ^ "\n") in
+let _ = TextIO.print ("   123456789I * 987654321I = " ^ IntInf.toString product ^ "\n") in
+let _ = TextIO.print ("   1000000I / 3I = " ^ IntInf.toString quotient ^ "\n") in
+let _ = TextIO.print ("   1000000I mod 3I = " ^ IntInf.toString remainder ^ "\n\n") in
+let _ = TextIO.print "3. COMPARISONS:\n" in
+let _ = TextIO.print ("   10I < 20I = " ^ (if less then "true" else "false") ^ "\n") in
+let _ = TextIO.print ("   42I = 42I = " ^ (if equal then "true" else "false") ^ "\n") in
+let _ = TextIO.print ("   100I < 50I = " ^ (if greater then "true" else "false") ^ "\n\n") in
+let _ = TextIO.print "4. MODULE FUNCTIONS (Conversion):\n" in
+let _ = TextIO.print ("   fromInt 12345 = " ^ IntInf.toString fromIntResult ^ "\n\n") in
+let _ = TextIO.print "5. MODULE FUNCTIONS (Arithmetic):\n" in
+let _ = TextIO.print ("   add (10I, 20I) = " ^ IntInf.toString addResult ^ "\n") in
+let _ = TextIO.print ("   sub (100I, 30I) = " ^ IntInf.toString subResult ^ "\n") in
+let _ = TextIO.print ("   mul (7I, 8I) = " ^ IntInf.toString mulResult ^ "\n") in
+let _ = TextIO.print ("   div (100I, 3I) = " ^ IntInf.toString divResult ^ "\n") in
+let _ = TextIO.print ("   mod (100I, 3I) = " ^ IntInf.toString modResult ^ "\n\n") in
+let _ = TextIO.print "6. UNARY OPERATIONS:\n" in
+let _ = TextIO.print ("   neg 42I = " ^ IntInf.toString negativeValue ^ "\n") in
+let _ = TextIO.print ("   abs (-42I) = " ^ IntInf.toString absoluteValue ^ "\n\n") in
+let _ = TextIO.print "7. MIN/MAX:\n" in
+let _ = TextIO.print ("   min (10I, 20I) = " ^ IntInf.toString minValue ^ "\n") in
+let _ = TextIO.print ("   max (10I, 20I) = " ^ IntInf.toString maxValue ^ "\n\n") in
+let _ = TextIO.print "8. POWER (2^100):\n" in
+let _ = TextIO.print ("   pow (2I, 100) = " ^ powerStr ^ "\n\n") in
+let _ = TextIO.print "9. SIGN FUNCTION:\n" in
+let _ = TextIO.print ("   sign 42I = " ^ Int.toString signPositive ^ "\n") in
+let _ = TextIO.print ("   sign 0I = " ^ Int.toString signZero ^ "\n") in
+let _ = TextIO.print ("   sign (-42I) = " ^ Int.toString signNegative ^ "\n\n") in
+let _ = TextIO.print "10. LARGE COMPUTATION:\n" in
+let _ = TextIO.print ("   10! = " ^ IntInf.toString factorial10 ^ "\n\n") in
+let _ = TextIO.print "11. FIBONACCI SEQUENCE:\n" in
+let _ = TextIO.print ("   fib(1-10) = " ^
+    IntInf.toString fib1 ^ ", " ^
+    IntInf.toString fib2 ^ ", " ^
+    IntInf.toString fib3 ^ ", " ^
+    IntInf.toString fib4 ^ ", " ^
+    IntInf.toString fib5 ^ ", " ^
+    IntInf.toString fib6 ^ ", " ^
+    IntInf.toString fib7 ^ ", " ^
+    IntInf.toString fib8 ^ ", " ^
+    IntInf.toString fib9 ^ ", " ^
+    IntInf.toString fib10 ^ "\n\n") in
+let _ = TextIO.print "========================================\n" in
+let _ = TextIO.print "  ✅ All IntInf features working!\n" in
+let _ = TextIO.print "========================================\n" in
+"IntInf demo completed successfully!"

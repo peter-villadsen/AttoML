@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace AttoML.Core.Parsing
 {
@@ -8,6 +9,7 @@ namespace AttoML.Core.Parsing
 
     public sealed class IntLit : Expr { public int Value; public IntLit(int v){Value=v;} }
     public sealed class FloatLit : Expr { public double Value; public FloatLit(double v){Value=v;} }
+    public sealed class IntInfLit : Expr { public BigInteger Value; public IntInfLit(BigInteger v){Value=v;} }
     public sealed class StringLit : Expr { public string Value; public StringLit(string v){Value=v;} }
     public sealed class BoolLit : Expr { public bool Value; public BoolLit(bool v){Value=v;} }
     public sealed class UnitLit : Expr { public static readonly UnitLit Instance = new UnitLit(); private UnitLit(){} }
@@ -39,6 +41,7 @@ namespace AttoML.Core.Parsing
     public sealed class PVar : Pattern { public string Name; public PVar(string n){Name=n;} }
     public sealed class PInt : Pattern { public int Value; public PInt(int v){Value=v;} }
     public sealed class PFloat : Pattern { public double Value; public PFloat(double v){Value=v;} }
+    public sealed class PIntInf : Pattern { public BigInteger Value; public PIntInf(BigInteger v){Value=v;} }
     public sealed class PString : Pattern { public string Value; public PString(string v){Value=v;} }
     public sealed class PBool : Pattern { public bool Value; public PBool(bool v){Value=v;} }
     public sealed class PUnit : Pattern { public static readonly PUnit Instance = new PUnit(); private PUnit(){} }

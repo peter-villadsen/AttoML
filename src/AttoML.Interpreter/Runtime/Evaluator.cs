@@ -108,6 +108,7 @@ namespace AttoML.Interpreter
             {
                 case IntLit i: return new IntVal(i.Value);
                 case FloatLit f: return new FloatVal(f.Value);
+                case IntInfLit ii: return new IntInfVal(ii.Value);
                 case StringLit s: return new StringVal(s.Value);
                 case BoolLit b: return new BoolVal(b.Value);
                 case UnitLit: return UnitVal.Instance;
@@ -270,6 +271,9 @@ namespace AttoML.Interpreter
                     extendedEnv = env; return false;
                 case PFloat pf:
                     if (v is FloatVal fv && fv.Value == pf.Value) { extendedEnv = e; return true; }
+                    extendedEnv = env; return false;
+                case PIntInf pii:
+                    if (v is IntInfVal iiv && iiv.Value == pii.Value) { extendedEnv = e; return true; }
                     extendedEnv = env; return false;
                 case PString ps:
                     if (v is StringVal sv && sv.Value == ps.Value) { extendedEnv = e; return true; }

@@ -306,6 +306,7 @@ namespace AttoML.Core.Modules
                     "bool" => TConst.Bool,
                     "float" => TConst.Float,
                     "string" => TConst.String,
+                    "intinf" => TConst.IntInf,
                     "unit" => TConst.Unit,
                     "exn" => TConst.Exn,
                     // Treat any other name as an ADT reference (supports recursive payloads like Expr)

@@ -18,6 +18,7 @@ namespace AttoML.Core
             var boolT = Types.TConst.Bool;
             var floatT = Types.TConst.Float;
             var strT = Types.TConst.String;
+            var intInfT = Types.TConst.IntInf;
             var unitT = Types.TConst.Unit;
             var exnT = Types.TConst.Exn;
 
@@ -105,6 +106,28 @@ namespace AttoML.Core
             BaseTypeEnv.Add("String.ofFloat", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(floatT, strT)));
             BaseTypeEnv.Add("String.toInt", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, intT)));
             BaseTypeEnv.Add("String.toFloat", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, floatT)));
+
+            // IntInf module (arbitrary precision integers)
+            BaseTypeEnv.Add("IntInf.fromInt", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(intT, intInfT)));
+            BaseTypeEnv.Add("IntInf.toInt", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(intInfT, intT)));
+            BaseTypeEnv.Add("IntInf.toString", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(intInfT, strT)));
+            // fromString : string -> intinf option
+            var optionIntInf = new Types.TAdt("option", new[] { intInfT });
+            BaseTypeEnv.Add("IntInf.fromString", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(strT, optionIntInf)));
+            BaseTypeEnv.Add("IntInf.add", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.sub", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.mul", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.div", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.mod", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.neg", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.abs", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(intInfT, intInfT)));
+            // compare : intinf -> intinf -> order (order is an ADT: LESS | EQUAL | GREATER)
+            var orderT = new Types.TAdt("order");
+            BaseTypeEnv.Add("IntInf.compare", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, orderT)));
+            BaseTypeEnv.Add("IntInf.min", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.max", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intInfT, intInfT)));
+            BaseTypeEnv.Add("IntInf.pow", new Types.Scheme(Array.Empty<Types.TVar>(), Fun2(intInfT, intT, intInfT)));
+            BaseTypeEnv.Add("IntInf.sign", new Types.Scheme(Array.Empty<Types.TVar>(), new Types.TFun(intInfT, intT)));
 
             // Tuple module
             var t1 = new Types.TVar();

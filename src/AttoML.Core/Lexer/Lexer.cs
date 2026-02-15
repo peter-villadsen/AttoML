@@ -47,7 +47,7 @@ namespace AttoML.Core.Lexer
                 return new Token(KeywordKind(id), id, start);
             }
 
-            // Numbers: int or float
+            // Numbers: int or float or intinf
             if (char.IsDigit(c))
             {
                 var num = ReadWhile(ch => char.IsDigit(ch));
@@ -56,7 +56,18 @@ namespace AttoML.Core.Lexer
                     Advance();
                     var frac = ReadWhile(ch => char.IsDigit(ch));
                     var text = num + "." + frac;
+                    // Check for IntInf suffix after decimal (error case)
+                    if (!IsEOF && Peek() == 'I')
+                    {
+                        throw new LexerException($"IntInf literal cannot have decimal point: {text}I", _pos);
+                    }
                     return new Token(TokenKind.FloatLiteral, text, start);
+                }
+                // Check for IntInf suffix 'I'
+                if (!IsEOF && Peek() == 'I')
+                {
+                    Advance();
+                    return new Token(TokenKind.IntInfLiteral, num, start);
                 }
                 return new Token(TokenKind.IntLiteral, num, start);
             }

@@ -28,6 +28,7 @@ namespace AttoML.Core.Types
         public static readonly TConst String = new("string");
         public static readonly TConst Unit = new("unit");
         public static readonly TConst Exn = new("exn");
+        public static readonly TConst IntInf = new("intinf");
     }
 
     public sealed class TSet : Type
