@@ -678,7 +678,7 @@ Functions: `isOk`, `isError`, `getOr`, `getError`, `map`, `mapError`, `bind`, `a
 
 ### Set Module
 
-Provides immutable sets of integers with efficient operations:
+Provides polymorphic immutable sets with efficient operations (works with any type):
 
 ```ml
 >> let s1 = Set.add 2 (Set.singleton 1) in
@@ -704,13 +704,21 @@ val it : int = 3
 
 >> Set.toList (Set.diff (Set.fromList [1, 2, 3]) (Set.fromList [2]))
 val it : [int] = [1, 3]
+
+(* Polymorphic: works with any type! *)
+>> let strSet = Set.fromList ["hello", "world", "hello"] in
+   Set.toList strSet
+val it : [string] = ["hello", "world"]
+
+>> Set.contains true (Set.fromList [true, false])
+val it : bool = true
 ```
 
 Functions: `empty`, `singleton`, `add`, `remove`, `contains`, `size`, `isEmpty`, `union`, `intersect`, `diff`, `isSubset`, `toList`, `fromList`
 
 ### Map Module
 
-Provides immutable maps (dictionaries) with integer keys and integer values:
+Provides polymorphic immutable maps/dictionaries (works with any key and value types):
 
 ```ml
 >> let m = Map.add 2 20 (Map.singleton 1 10) in
@@ -738,6 +746,14 @@ val it : int = 30
 
 >> Map.toList (Map.remove 2 (Map.fromList [(1, 10), (2, 20), (3, 30)]))
 val it : [(int * int)] = [(1, 10), (3, 30)]
+
+(* Polymorphic: works with any key and value types! *)
+>> let strMap = Map.fromList [("one", 1), ("two", 2), ("three", 3)] in
+   Map.get "two" strMap
+val it : Option = <Some 2>
+
+>> Map.size (Map.fromList [(true, "yes"), (false, "no")])
+val it : int = 2
 ```
 
 Functions: `empty`, `singleton`, `add`, `remove`, `get`, `contains`, `size`, `isEmpty`, `keys`, `values`, `toList`, `fromList`, `mapValues`, `fold`
@@ -845,8 +861,8 @@ AttoML provides a comprehensive set of functional programming libraries:
 - **List**: Full suite of list operations (map, filter, fold, etc.)
 - **String**: String manipulation and conversion
 - **Tuple**: Tuple operations and currying utilities
-- **Set**: Immutable integer sets with set algebra operations
-- **Map**: Immutable integer→integer maps (dictionaries)
+- **Set**: Polymorphic immutable sets with set algebra operations (`'a set`)
+- **Map**: Polymorphic immutable maps/dictionaries (`('k, 'v) map`)
 
 **Prelude Modules (AttoML):**
 - **Option**: Standard option type with 11 operations
@@ -855,7 +871,7 @@ AttoML provides a comprehensive set of functional programming libraries:
 - **SymCalc**: Symbolic differentiation and simplification
 
 #### 🔄 Partial (vs SML Basis Library)
-- **Limited polymorphic collections**: User-defined types support full polymorphism (`'a option`, `'a tree`), but built-in Set and Map modules currently work only with `int` keys/values
+- **Fully polymorphic collections**: Set and Map modules are fully polymorphic, working with any type (`'a set`, `('k, 'v) map`)
 - **No Array module**: Mutable arrays not supported (pure functional focus)
 - **TextIO**: Basic file I/O operations available (print, file read/write)
 - **No BinIO**: Binary I/O not supported
@@ -879,12 +895,11 @@ AttoML aims to be a **teaching language** that:
 - Dual syntax support (ML-style `fn/case/of` + OCaml-style `fun/match/with`)
 - Modern libraries (Option, Result) as first-class prelude modules
 - Symbolic math capabilities (SymCalc, Complex)
-- Set and Map collections (simplified, integer-only)
+- Polymorphic Set and Map collections (`'a set`, `('k, 'v) map`)
 
 **What AttoML Omits (Intentionally):**
 - Side effects and mutation (teaching focus on pure FP)
-- I/O operations (simplifies interpreter)
-- Polymorphic collections (simplifies implementation)
+- Advanced I/O operations (basic TextIO available)
 - Advanced module features (functors, abstype)
 
 AttoML is ideal for teaching functional programming concepts, type inference, and building small interpreters or symbolic computation tools.
