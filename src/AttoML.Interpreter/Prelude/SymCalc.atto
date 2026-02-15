@@ -195,33 +195,34 @@ structure SymCalc = {
   fun diff (x, e) =
     match e with
     Expr.Const _ -> Expr.Const 0.0
-    | Expr.Var v -> 
-        if String.equalsIgnoreCase v x then Expr.Const 1.0 
+    | Expr.Var v ->
+        if String.equalsIgnoreCase v x then Expr.Const 1.0
         else Expr.Const 0.0
     | Expr.Add (a, b) -> Expr.Add (diff (x, a), diff (x, b))
     | Expr.Sub (a, b) -> Expr.Sub (diff (x, a), diff (x, b))
-    | Expr.Mul (a, b) -> 
+    | Expr.Mul (a, b) ->
         Expr.Add (Expr.Mul (diff (x, a), b), Expr.Mul (a, diff (x, b)))
-    | Expr.Div (a, b) -> 
+    | Expr.Div (a, b) ->
         Expr.Div (
-          Expr.Sub (Expr.Mul (diff (x, a), b), Expr.Mul (a, diff (x, b))), 
+          Expr.Sub (Expr.Mul (diff (x, a), b), Expr.Mul (a, diff (x, b))),
           Expr.Pow (b, Expr.Const 2.0))
     | Expr.Pow (a, b) ->
         if isConstExpr b then
-          let k = constValue b in 
+          let k = constValue b in
           Expr.Mul (
-            Expr.Mul (Expr.Const k, Expr.Pow (a, Expr.Const (k - 1.0))), 
+            Expr.Mul (Expr.Const k, Expr.Pow (a, Expr.Const (k - 1.0))),
             diff (x, a))
-        else 
+        else
           Expr.Mul (
-            Expr.Pow (a, b), 
+            Expr.Pow (a, b),
             Expr.Add (
-              Expr.Mul (diff (x, b), Expr.Log a), 
+              Expr.Mul (diff (x, b), Expr.Log a),
               Expr.Div (Expr.Mul (b, diff (x, a)), a)))
     | Expr.Sin a -> Expr.Mul (Expr.Cos a, diff (x, a))
-    | Expr.Cos a -> 
+    | Expr.Cos a ->
         Expr.Mul (Expr.Const (0.0 - 1.0), Expr.Mul (Expr.Sin a, diff (x, a)))
-    | Expr.Log a -> Expr.Div (diff (x, a), a),
+    | Expr.Log a -> Expr.Div (diff (x, a), a)
+    end,
 
   (* Expression analysis helpers *)
   fun isZero r = r = 0.0,
@@ -239,116 +240,118 @@ structure SymCalc = {
     Expr.Const r -> Expr.Const r
     | Expr.Var v -> Expr.Var v
     | Expr.Add (a, b) ->
-      let a1 = simplify a in 
+      let a1 = simplify a in
       let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then 
+        if isConstExpr b1 then
           let r2 = constValue b1 in Expr.Const (r1 + r2)
-        else if isZero r1 then b1 
+        else if isZero r1 then b1
         else Expr.Add (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then 
-          let r2 = constValue b1 in 
-          if isZero r2 then a1 
-          else Expr.Add (a1, Expr.Const r2) 
+        if isConstExpr b1 then
+          let r2 = constValue b1 in
+          if isZero r2 then a1
+          else Expr.Add (a1, Expr.Const r2)
         else Expr.Add (a1, b1)
     | Expr.Sub (a, b) ->
-      let a1 = simplify a in 
+      let a1 = simplify a in
       let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then 
+        if isConstExpr b1 then
           let r2 = constValue b1 in Expr.Const (r1 - r2)
-        else if isZero r1 then Expr.Mul (Expr.Const (0.0 - 1.0), b1) 
+        else if isZero r1 then Expr.Mul (Expr.Const (0.0 - 1.0), b1)
         else Expr.Sub (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then 
-          let r2 = constValue b1 in 
-          if isZero r2 then a1 
-          else Expr.Sub (a1, Expr.Const r2) 
+        if isConstExpr b1 then
+          let r2 = constValue b1 in
+          if isZero r2 then a1
+          else Expr.Sub (a1, Expr.Const r2)
         else Expr.Sub (a1, b1)
     | Expr.Mul (a, b) ->
-      let a1 = simplify a in 
+      let a1 = simplify a in
       let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then 
+        if isConstExpr b1 then
           let r2 = constValue b1 in Expr.Const (r1 * r2)
-        else if isZero r1 then Expr.Const 0.0 
-        else if isOne r1 then b1 
+        else if isZero r1 then Expr.Const 0.0
+        else if isOne r1 then b1
         else Expr.Mul (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then 
-          let r2 = constValue b1 in 
-          if isZero r2 then Expr.Const 0.0 
-          else if isOne r2 then a1 
-          else Expr.Mul (a1, Expr.Const r2) 
+        if isConstExpr b1 then
+          let r2 = constValue b1 in
+          if isZero r2 then Expr.Const 0.0
+          else if isOne r2 then a1
+          else Expr.Mul (a1, Expr.Const r2)
         else Expr.Mul (a1, b1)
     | Expr.Div (a, b) ->
-      let a1 = simplify a in 
+      let a1 = simplify a in
       let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then 
-          let r2 = constValue b1 in 
-          if isZero r2 then raise (Fail "DivByZero") 
+        if isConstExpr b1 then
+          let r2 = constValue b1 in
+          if isZero r2 then raise (Fail "DivByZero")
           else Expr.Const (r1 / r2)
-        else if isZero r1 then Expr.Const 0.0 
+        else if isZero r1 then Expr.Const 0.0
         else Expr.Div (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then 
-          let r2 = constValue b1 in 
-          if isOne r2 then a1 
-          else Expr.Div (a1, Expr.Const r2) 
+        if isConstExpr b1 then
+          let r2 = constValue b1 in
+          if isOne r2 then a1
+          else Expr.Div (a1, Expr.Const r2)
         else Expr.Div (a1, b1)
     | Expr.Pow (a, b) ->
-      let a1 = simplify a in 
+      let a1 = simplify a in
       let b1 = simplify b in
       if isConstExpr a1 then
         let r1 = constValue a1 in
-        if isConstExpr b1 then 
+        if isConstExpr b1 then
           let r2 = constValue b1 in
-          if isZero r2 then Expr.Const 1.0 
+          if isZero r2 then Expr.Const 1.0
           else if isOne r2 then Expr.Const r1
           else if r1 > 0.0 then Expr.Const (Math.exp (r2 * Math.log r1))
           else Expr.Pow (Expr.Const r1, Expr.Const r2)
         else Expr.Pow (Expr.Const r1, b1)
       else
-        if isConstExpr b1 then 
-          let r2 = constValue b1 in 
-          if isOne r2 then a1 
-          else Expr.Pow (a1, Expr.Const r2) 
+        if isConstExpr b1 then
+          let r2 = constValue b1 in
+          if isOne r2 then a1
+          else Expr.Pow (a1, Expr.Const r2)
         else Expr.Pow (a1, b1)
-    | Expr.Sin a -> 
-      let a1 = simplify a in 
-      if isConstExpr a1 then Expr.Const (Math.sin (constValue a1)) 
+    | Expr.Sin a ->
+      let a1 = simplify a in
+      if isConstExpr a1 then Expr.Const (Math.sin (constValue a1))
       else Expr.Sin a1
-    | Expr.Cos a -> 
-      let a1 = simplify a in 
-      if isConstExpr a1 then Expr.Const (Math.cos (constValue a1)) 
+    | Expr.Cos a ->
+      let a1 = simplify a in
+      if isConstExpr a1 then Expr.Const (Math.cos (constValue a1))
       else Expr.Cos a1
-    | Expr.Log a -> 
-      let a1 = simplify a in 
-      if isConstExpr a1 then 
-        let r = constValue a1 in 
-        if r <= 0.0 then raise Domain 
-        else Expr.Const (Math.log r) 
-      else Expr.Log a1,
+    | Expr.Log a ->
+      let a1 = simplify a in
+      if isConstExpr a1 then
+        let r = constValue a1 in
+        if r <= 0.0 then raise Domain
+        else Expr.Const (Math.log r)
+      else Expr.Log a1
+    end,
 
   (* Precedence for pretty printing *)
   fun prec e =
     match e with
-    Expr.Const _ -> 4 
-    | Expr.Var _ -> 4 
-    | Expr.Sin _ -> 4 
-    | Expr.Cos _ -> 4 
+    Expr.Const _ -> 4
+    | Expr.Var _ -> 4
+    | Expr.Sin _ -> 4
+    | Expr.Cos _ -> 4
     | Expr.Log _ -> 4
     | Expr.Pow _ -> 3
-    | Expr.Mul _ -> 2 
+    | Expr.Mul _ -> 2
     | Expr.Div _ -> 2
-    | Expr.Add _ -> 1 
-    | Expr.Sub _ -> 1,
+    | Expr.Add _ -> 1
+    | Expr.Sub _ -> 1
+    end,
 
   (* Format float with decimal point *)
   fun fmtFloat r = 
@@ -361,24 +364,25 @@ structure SymCalc = {
     match e with
     Expr.Const r -> fmtFloat r
     | Expr.Var v -> v
-    | Expr.Add (a, b) -> 
-      let s = String.concat (String.concat (toStrP (a, 1)) " + ") (toStrP (b, 1)) in 
+    | Expr.Add (a, b) ->
+      let s = String.concat (String.concat (toStrP (a, 1)) " + ") (toStrP (b, 1)) in
       if p > 1 then String.concat (String.concat "(" s) ")" else s
-    | Expr.Sub (a, b) -> 
-      let s = String.concat (String.concat (toStrP (a, 1)) " - ") (toStrP (b, 1)) in 
+    | Expr.Sub (a, b) ->
+      let s = String.concat (String.concat (toStrP (a, 1)) " - ") (toStrP (b, 1)) in
       if p > 1 then String.concat (String.concat "(" s) ")" else s
-    | Expr.Mul (a, b) -> 
-      let s = String.concat (String.concat (toStrP (a, 2)) " * ") (toStrP (b, 2)) in 
+    | Expr.Mul (a, b) ->
+      let s = String.concat (String.concat (toStrP (a, 2)) " * ") (toStrP (b, 2)) in
       if p > 2 then String.concat (String.concat "(" s) ")" else s
-    | Expr.Div (a, b) -> 
-      let s = String.concat (String.concat (toStrP (a, 2)) " / ") (toStrP (b, 2)) in 
+    | Expr.Div (a, b) ->
+      let s = String.concat (String.concat (toStrP (a, 2)) " / ") (toStrP (b, 2)) in
       if p > 2 then String.concat (String.concat "(" s) ")" else s
-    | Expr.Pow (a, b) -> 
-      let s = String.concat (String.concat (toStrP (a, 3)) " ^ ") (toStrP (b, 3)) in 
+    | Expr.Pow (a, b) ->
+      let s = String.concat (String.concat (toStrP (a, 3)) " ^ ") (toStrP (b, 3)) in
       if p > 3 then String.concat (String.concat "(" s) ")" else s
     | Expr.Sin a -> String.concat (String.concat "sin(" (toStrP (a, 4))) ")"
     | Expr.Cos a -> String.concat (String.concat "cos(" (toStrP (a, 4))) ")"
-    | Expr.Log a -> String.concat (String.concat "log(" (toStrP (a, 4))) ")",
+    | Expr.Log a -> String.concat (String.concat "log(" (toStrP (a, 4))) ")"
+    end,
 
   (* Convert expression to string *)
   fun toString e = toStrP (e, 0),

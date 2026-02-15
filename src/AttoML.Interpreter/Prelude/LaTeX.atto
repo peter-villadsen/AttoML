@@ -13,12 +13,14 @@ structure LaTeX = {
   fun isAtom e =
     match e with Expr.Const _ -> true
     | Expr.Var _ -> true
-    | _ -> false,
+    | _ -> false
+    end,
 
   (* Helper: check if expression is numeric constant *)
   fun isNumeric e =
     match e with Expr.Const _ -> true
-    | _ -> false,
+    | _ -> false
+    end,
 
   (* Helper: check if expression needs multiplication symbol *)
   fun needsMulSymbol (a, b) =
@@ -79,7 +81,8 @@ structure LaTeX = {
         Expr.Cos a1
     | Expr.Log a ->
         let a1 = canonicalize a in
-        Expr.Log a1,
+        Expr.Log a1
+    end,
 
   (* Convert to LaTeX with precedence *)
   fun toLatexP (e, prec) =
@@ -119,7 +122,8 @@ structure LaTeX = {
         String.concat (String.concat "\\cos(" aStr) ")"
     | Expr.Log a ->
         let aStr = toLatexP (a, 0) in
-        String.concat (String.concat "\\log(" aStr) ")",
+        String.concat (String.concat "\\log(" aStr) ")"
+    end,
 
   (* Convert to LaTeX string *)
   fun toLatex e =

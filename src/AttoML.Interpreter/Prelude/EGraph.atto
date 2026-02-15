@@ -64,7 +64,8 @@ structure EGraph = {
   (* Association list helpers *)
   fun assocFind (key, alist) =
     match alist with [] -> []
-    | (k, v) :: rest -> if k = key then [v] else assocFind (key, rest),
+    | (k, v) :: rest -> if k = key then [v] else assocFind (key, rest)
+    end,
 
   fun assocAdd (key, value, alist) = [(key, value)] @ alist,
 
@@ -72,22 +73,26 @@ structure EGraph = {
     match alist with [] -> [(key, value)]
     | (k, v) :: rest ->
         if k = key then [(k, value)] @ rest
-        else [(k, v)] @ assocUpdate (key, value, rest),
+        else [(k, v)] @ assocUpdate (key, value, rest)
+    end,
 
   fun assocRemove (key, alist) =
     match alist with [] -> []
-    | (k, v) :: rest -> if k = key then rest else [(k, v)] @ assocRemove (key, rest),
+    | (k, v) :: rest -> if k = key then rest else [(k, v)] @ assocRemove (key, rest)
+    end,
 
   (* Set operations on lists *)
   fun setMember (x, lst) =
     match lst with [] -> false
-    | h :: t -> if x = h then true else setMember (x, t),
+    | h :: t -> if x = h then true else setMember (x, t)
+    end,
 
   fun setAdd (x, lst) = if setMember (x, lst) then lst else [x] @ lst,
 
   fun setUnion (lst1, lst2) =
     match lst1 with [] -> lst2
-    | h :: t -> setUnion (t, setAdd (h, lst2)),
+    | h :: t -> setUnion (t, setAdd (h, lst2))
+    end,
 
   (* Tuple accessors for EGraph: ((classes, unionFind, hashCons), (nextId, worklist)) *)
   fun classes eg = match eg with ((c, uf, hc), (nid, wl)) -> c end,
@@ -111,7 +116,8 @@ structure EGraph = {
           (* Path compression: update id to point directly to canonical *)
           let newUF = assocUpdate (id, canonical, unionFind eg2) in
           let eg3 = mkEGraph (classes eg2, newUF, hashCons eg2, nextId eg2, worklist eg2) in
-          (canonical, eg3),
+          (canonical, eg3)
+    end,
 
   (* Canonicalize an ENode by finding canonical IDs of children *)
   fun canonNode (eg, node) =
@@ -148,7 +154,8 @@ structure EGraph = {
         (ENode.ELog ca, eg1)
     | ENode.ENeg a ->
         let (ca, eg1) = find (eg, a) in
-        (ENode.ENeg ca, eg1),
+        (ENode.ENeg ca, eg1)
+    end,
 
   (* Add an ENode to e-graph with hash-consing *)
   fun addNode (eg, node) =
@@ -160,7 +167,8 @@ structure EGraph = {
         let newClasses = assocAdd (id, [canonNode2], classes eg1) in
         let newHashCons = assocAdd (canonNode2, id, hashCons eg1) in
         let eg2 = mkEGraph (newClasses, unionFind eg1, newHashCons, id + 1, worklist eg1) in
-        (id, eg2),
+        (id, eg2)
+    end,
 
   (* Convert SymCalc.Expr to e-graph *)
   fun add (eg, expr) =
@@ -194,7 +202,8 @@ structure EGraph = {
         addNode (eg1, ENode.ECos aId)
     | Expr.Log a ->
         let (aId, eg1) = add (eg, a) in
-        addNode (eg1, ENode.ELog aId),
+        addNode (eg1, ENode.ELog aId)
+    end,
 
   (* Union two e-classes *)
   fun union (eg, id1, id2) =
@@ -204,8 +213,8 @@ structure EGraph = {
     else
       (* Merge c2 into c1 *)
       let newUF = assocAdd (c2, c1, unionFind eg2) in
-      let nodes1 = match assocFind (c1, classes eg2) with ns :: [] -> ns | [] -> [] in
-      let nodes2 = match assocFind (c2, classes eg2) with ns :: [] -> ns | [] -> [] in
+      let nodes1 = match assocFind (c1, classes eg2) with ns :: [] -> ns | [] -> [] end in
+      let nodes2 = match assocFind (c2, classes eg2) with ns :: [] -> ns | [] -> [] end in
       let mergedNodes = setUnion (nodes1, nodes2) in
       let newClasses = assocUpdate (c1, mergedNodes, assocRemove (c2, classes eg2)) in
       let newWorklist = setAdd (c1, worklist eg2) in
@@ -217,9 +226,10 @@ structure EGraph = {
     | id :: rest ->
         let eg1 = mkEGraph (classes eg, unionFind eg, hashCons eg, nextId eg, rest) in
         (* Process e-class: re-canonicalize all nodes and merge duplicates *)
-        let nodes = match assocFind (id, classes eg) with ns :: [] -> ns | [] -> [] in
+        let nodes = match assocFind (id, classes eg) with ns :: [] -> ns | [] -> [] end in
         let eg2 = rebuildClass (eg1, id, nodes) in
-        rebuild eg2,
+        rebuild eg2
+    end,
 
   fun rebuildClass (eg, id, nodes) =
     match nodes with [] -> eg
@@ -235,15 +245,16 @@ structure EGraph = {
             let (cid, eg3) = find (eg1, id) in
             let newHashCons = assocUpdate (canonNode2, cid, hashCons eg3) in
             mkEGraph (classes eg3, unionFind eg3, newHashCons, nextId eg3, worklist eg3)
-        in
-        rebuildClass (eg2, id, rest),
+        end in
+        rebuildClass (eg2, id, rest)
+    end,
 
   (* Pattern matching *)
   fun matchPattern (eg, id, pat, subst) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * int * EPattern * (string * int) list) -> (string * int) list list =
     match pat with EPattern.PConst r ->
         (* Check if e-class contains constant *)
         let (cid, eg1) = find (eg, id) in
-        let nodes = match assocFind (cid, classes eg1) with ns :: [] -> ns | [] -> [] in
+        let nodes = match assocFind (cid, classes eg1) with ns :: [] -> ns | [] -> [] end in
         if containsConst (nodes, r) then [subst] else []
     | EPattern.PVar v ->
         (* Bind pattern variable *)
@@ -259,7 +270,8 @@ structure EGraph = {
     | EPattern.PSin a -> matchUnary (eg, id, a, subst, isSinNode)
     | EPattern.PCos a -> matchUnary (eg, id, a, subst, isCosNode)
     | EPattern.PLog a -> matchUnary (eg, id, a, subst, isLogNode)
-    | EPattern.PNeg a -> matchUnary (eg, id, a, subst, isNegNode),
+    | EPattern.PNeg a -> matchUnary (eg, id, a, subst, isNegNode)
+    end,
 
   fun containsConst (nodes, r) =
     match nodes with [] -> false
@@ -267,21 +279,22 @@ structure EGraph = {
         match n with
           ENode.EConst r2 -> if r = r2 then true else containsConst (rest, r)
         | _ -> containsConst (rest, r)
-        end,
+        end
+    end,
 
-  fun isAddNode node = match node with ENode.EAdd _ -> true | _ -> false,
-  fun isSubNode node = match node with ENode.ESub _ -> true | _ -> false,
-  fun isMulNode node = match node with ENode.EMul _ -> true | _ -> false,
-  fun isDivNode node = match node with ENode.EDiv _ -> true | _ -> false,
-  fun isPowNode node = match node with ENode.EPow _ -> true | _ -> false,
-  fun isSinNode node = match node with ENode.ESin _ -> true | _ -> false,
-  fun isCosNode node = match node with ENode.ECos _ -> true | _ -> false,
-  fun isLogNode node = match node with ENode.ELog _ -> true | _ -> false,
-  fun isNegNode node = match node with ENode.ENeg _ -> true | _ -> false,
+  fun isAddNode node = match node with ENode.EAdd _ -> true | _ -> false end,
+  fun isSubNode node = match node with ENode.ESub _ -> true | _ -> false end,
+  fun isMulNode node = match node with ENode.EMul _ -> true | _ -> false end,
+  fun isDivNode node = match node with ENode.EDiv _ -> true | _ -> false end,
+  fun isPowNode node = match node with ENode.EPow _ -> true | _ -> false end,
+  fun isSinNode node = match node with ENode.ESin _ -> true | _ -> false end,
+  fun isCosNode node = match node with ENode.ECos _ -> true | _ -> false end,
+  fun isLogNode node = match node with ENode.ELog _ -> true | _ -> false end,
+  fun isNegNode node = match node with ENode.ENeg _ -> true | _ -> false end,
 
   fun matchBinary (eg, id, patA, patB, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * int * EPattern * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
     let (cid, eg1) = find (eg, id) in
-    let nodes = match assocFind (cid, classes eg1) with ns :: [] -> ns | [] -> [] in
+    let nodes = match assocFind (cid, classes eg1) with ns :: [] -> ns | [] -> [] end in
     matchBinaryInNodes (eg1, nodes, patA, patB, subst, predicate),
 
   fun matchBinaryInNodes (eg, nodes, patA, patB, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * ENode list * EPattern * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
@@ -294,16 +307,19 @@ structure EGraph = {
           | ENode.EDiv (a, b) -> (a, b)
           | ENode.EPow (a, b) -> (a, b)
           | _ -> (0, 0)  (* Should not happen *)
-          in
+          end in
           match matchPattern (eg, aId, patA, subst) with subst2 :: [] ->
               match matchPattern (eg, bId, patB, subst2) with subst3 :: [] -> [subst3]
               | [] -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
+              end
           | [] -> matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
-        else matchBinaryInNodes (eg, rest, patA, patB, subst, predicate),
+          end
+        else matchBinaryInNodes (eg, rest, patA, patB, subst, predicate)
+    end,
 
   fun matchUnary (eg, id, patA, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * int * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
     let (cid, eg1) = find (eg, id) in
-    let nodes = match assocFind (cid, classes eg1) with ns :: [] -> ns | [] -> [] in
+    let nodes = match assocFind (cid, classes eg1) with ns :: [] -> ns | [] -> [] end in
     matchUnaryInNodes (eg1, nodes, patA, subst, predicate),
 
   fun matchUnaryInNodes (eg, nodes, patA, subst, predicate) : ((((int * ENode list) list * (int * int) list * (ENode * int) list) * (int * (int list))) * ENode list * EPattern * (string * int) list * (ENode -> bool)) -> (string * int) list list =
@@ -315,10 +331,12 @@ structure EGraph = {
           | ENode.ELog a -> a
           | ENode.ENeg a -> a
           | _ -> 0  (* Should not happen *)
-          in
+          end in
           match matchPattern (eg, aId, patA, subst) with subst2 :: [] -> [subst2]
           | [] -> matchUnaryInNodes (eg, rest, patA, subst, predicate)
-        else matchUnaryInNodes (eg, rest, patA, subst, predicate),
+          end
+        else matchUnaryInNodes (eg, rest, patA, subst, predicate)
+    end,
 
   (* Instantiate template with substitution *)
   fun instantiate (eg, tmpl, subst) =
@@ -359,12 +377,13 @@ structure EGraph = {
         addNode (eg1, ENode.ELog aId)
     | Template.TNeg a ->
         let (aId, eg1) = instantiate (eg, a, subst) in
-        addNode (eg1, ENode.ENeg aId),
+        addNode (eg1, ENode.ENeg aId)
+    end,
 
   (* Rewrite rule helpers *)
-  fun ruleName r = match r with (name, _, _) -> name,
-  fun rulePattern r = match r with (_, pat, _) -> pat,
-  fun ruleTemplate r = match r with (_, _, tmpl) -> tmpl,
+  fun ruleName r = match r with (name, _, _) -> name end,
+  fun rulePattern r = match r with (_, pat, _) -> pat end,
+  fun ruleTemplate r = match r with (_, _, tmpl) -> tmpl end,
 
   (* Apply rewrite rule to all e-classes *)
   fun applyRewrite (eg, rule) =
@@ -374,13 +393,15 @@ structure EGraph = {
     match cls with [] -> eg
     | (id, _) :: rest ->
         let eg1 = applyToClass (eg, rule, id) in
-        applyToClasses (eg1, rule, rest),
+        applyToClasses (eg1, rule, rest)
+    end,
 
   fun applyToClass (eg, rule, id) =
     match matchPattern (eg, id, rulePattern rule, []) with subst :: [] ->
         let (rhsId, eg1) = instantiate (eg, ruleTemplate rule, subst) in
         union (eg1, id, rhsId)
-    | [] -> eg,
+    | [] -> eg
+    end,
 
   (* Saturate e-graph with rewrite rules *)
   fun saturate (eg, rules, maxIters) =
@@ -394,7 +415,8 @@ structure EGraph = {
     match rules with [] -> eg
     | rule :: rest ->
         let eg1 = applyRewrite (eg, rule) in
-        applyRules (eg1, rest),
+        applyRules (eg1, rest)
+    end,
 
   (* Extract minimum cost term *)
   fun extract (eg, costFn, rootId) =
@@ -419,7 +441,8 @@ structure EGraph = {
     | node :: rest ->
         let (cost, expr, memo2) = extractNode (eg, costFn, node, memo) in
         let (bc, be, memo3) = if cost < bestCost then (cost, expr, memo2) else (bestCost, bestExpr, memo2) in
-        extractBest (eg, costFn, rest, bc, be, memo3),
+        extractBest (eg, costFn, rest, bc, be, memo3)
+    end,
 
   fun extractNode (eg, costFn, node, memo) =
     match node with ENode.EConst r ->
@@ -469,4 +492,5 @@ structure EGraph = {
         let (ca, ea, memo1) = extractMemo (eg, costFn, a, memo) in
         let cost = costFn (ENode.ENeg a) + ca in
         (cost, Expr.Mul (Expr.Const (0.0 - 1.0), ea), memo1)
+    end
 }

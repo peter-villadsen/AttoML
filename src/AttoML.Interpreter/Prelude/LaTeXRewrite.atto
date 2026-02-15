@@ -13,7 +13,8 @@ structure LaTeXRewrite = {
     | ENode.ESin _ -> 2.0
     | ENode.ECos _ -> 2.0
     | ENode.ELog _ -> 2.0
-    | ENode.ENeg _ -> 5.0,   (* Penalize negation, prefer subtraction *)
+    | ENode.ENeg _ -> 5.0    (* Penalize negation, prefer subtraction *)
+    end,
 
   (* Helper to create rewrite rules as tuples: (name, pattern, template) *)
   fun mkRule (name, pat, tmpl) = (name, pat, tmpl),
