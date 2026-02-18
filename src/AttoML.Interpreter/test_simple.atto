@@ -1,3 +1,0 @@
-structure Test = {
-  fun f x = match x with A -> 1 | B -> 2
-}
